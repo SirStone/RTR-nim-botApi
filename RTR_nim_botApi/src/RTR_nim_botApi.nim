@@ -4,21 +4,49 @@
 
 import json
 import std/os
+import asyncdispatch, ws
 
 type
-    Bot* = ref object of RootObj
-      name*,version*,gameTypes*,authors*,description*,homepage*,countryCodes*,platform*,programmingLang*:string
+  Bot* = ref object of RootObj
+    # bot related
+    name*,version*,gameTypes*,authors*,description*,homepage*,countryCodes*,platform*,programmingLang*:string
 
-proc initBot*(json_file:string): Bot =
+# Game Server
+var gs_address:string = "localhost"
+var gs_port:int = 7654
+
+method run(bot:Bot, message:string) {.base.} = discard
+
+proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
+  echo "DEBUG: echoing in a different thread"
+  try:
+    var gs_ws = await newWebSocket(url)
+    while(gs_ws.readyState == Open):
+      let packet = await gs_ws.receiveStrPacket()
+      echo "RECEIVED PACKET: " & packet
+      bot.run("PIPPO")
+  except WebSocketClosedError:
+    echo "Socket closed. "
+  except WebSocketProtocolMismatchError:
+    echo "Socket tried to use an unknown protocol: ", getCurrentExceptionMsg()
+  except WebSocketError:
+    echo "Unexpected socket error: ", getCurrentExceptionMsg()
+  except Exception:
+    echo "Unexpected generic error: ", getCurrentExceptionMsg()
+
+proc initBot*(bot:Bot, json_file:string, connect:bool = true) = 
+  echo "DEBUG connect = " & $connect
   let json = parseJson(readFile(joinPath(getAppDir(),json_file)))
-  Bot(
-    name:json["name"].getStr,
-    version:json["version"].getStr,
-    gameTypes:json["gameTypes"].getStr,
-    authors:json["authors"].getStr,
-    description:json["description"].getStr,
-    homepage:json["homepage"].getStr,
-    countryCodes:json["countryCodes"].getStr,
-    platform:json["platform"].getStr,
-    programmingLang:json["programmingLang"].getStr  
-  )
+  bot.name = json["name"].getStr
+  bot.version = json["version"].getStr
+  bot.gameTypes = json["gameTypes"].getStr
+  bot.authors = json["authors"].getStr
+  bot.description = json["description"].getStr
+  bot.homepage = json["homepage"].getStr
+  bot.countryCodes = json["countryCodes"].getStr
+  bot.platform = json["platform"].getStr
+  bot.programmingLang = json["programmingLang"].getStr
+
+  # connect to the Game Server
+  if(connect):
+    waitFor talkWithGS(bot, "ws://" & gs_address & ":" & $(gs_port))

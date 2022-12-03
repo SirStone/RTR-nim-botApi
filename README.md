@@ -58,4 +58,17 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
     - [ ] receive [scanned-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/scanned-bot-event.yaml) from Server when our bot has scanned another bot
     - [ ] receive [skipped-turn-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/skipped-turn-event.yaml) from Server when our bot skipped a turn (the intent was not received at the server in time)
     - [ ] receive [tick-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/tick-event-for-bot.yaml) from Server when a new turn is about to begin
-    - [ ] receive [won-round-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/won-round-event.yaml) from Server 
+    - [ ] receive [won-round-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/won-round-event.yaml) from Server
+
+### planned TODO
+- [x] ~~init a new Bot importing the library~~ crete a new bot inheriting from a Bot object
+- [x] init the bot passing a standard json file (read [create a json file for bot info](https://robocode-dev.github.io/tank-royale/tutorial/my-first-bot.html#create-a-json-file-for-bot-info))
+- [x] have a "run" method
+- [x] open WebSocket to Server to start the connection handshake
+- [x] find out how to call a method that can be overridden from a new bot
+- [ ] find elegant method to convert between json and Messages object
+- [ ] implement all Messages objects
+- [ ] connect to server completing the handshake
+- [ ] implement all bot methods to be overriden
+- [ ] write bash launcher (maybe with input functionality for wich json to open)
+- [ ] complete standard bot bits and bobs necessary to make a working version 1.0.0
