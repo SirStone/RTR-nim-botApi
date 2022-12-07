@@ -27,12 +27,12 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 >Btw. there is no need for reverse engineering in the current Bot APIs, as the sources are provided as Open Source, and they have been kept as simple and straightforward as possible. At least that has been the intention...
 
 ### Bot interactions TODO (taken from [Schemas](https://github.com/robocode-dev/tank-royale/tree/master/schema/schemas#readme))
-- [ ] Joining a Server
-    - [ ] connect WebSocket
-    - [ ] receive [server-handshake](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/server-handshake.yaml) from Server
-    - [ ] send [bot-handshake](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-handshake.yaml) to Server
-- [ ] Leaving a Server
-    - [ ] disconnect WebSocket
+- [x] Joining a Server
+    - [x] connect WebSocket
+    - [x] receive [server-handshake](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/server-handshake.yaml) from Server
+    - [x] send [bot-handshake](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-handshake.yaml) to Server
+- [x] Leaving a Server
+    - [x] disconnect WebSocket
 - [ ] Partecipating in a Game
     - [ ] receive [game-started-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/game-started-event-for-bot.yaml) from Server
     - [ ] send [bot-ready](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-ready.yaml) to Server
