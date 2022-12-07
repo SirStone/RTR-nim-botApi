@@ -45,24 +45,23 @@ test "can init bot":
   check new_bot.platform == bot.platform
   check new_bot.programmingLang == bot.programmingLang
 
-# proc parseHook*(s: string, i: var int, v: var string) =
-#   case v:
-#     of "ServerHandshake": 
-
 test "JSON <-> Message":
   let json_message = """{"sessionId":"7vh2reL+TaeyXxEnN4Ngbg","name":"Robocode Tank Royale server","variant":"Tank Royale","version":"0.17.4","gameTypes":["classic","1v1"],"type":"ServerHandshake"}"""
   
+  var t1:float = 0
   let t0 = epochTime()
   let `type` = json_message.fromJson(Message).`type`
   case `type`:
   of botHandshake:
     let message:BotHandshake = json_message.fromJson(BotHandshake)
     let json_message2 = message.toJson()
+    t1 = epochTime()
     check message is BotHandshake
     check json_message2 == json_message
   of serverHandshake:
     let message:ServerHandshake = json_message.fromJson(ServerHandshake)
     let json_message2 = message.toJson()
+    t1 = epochTime()
     check message is ServerHandshake
     check json_message2 == json_message
-  echo "JSON-->object: ", epochTime() - t0
+  echo "JSON-->object->JSON: ", t1 - t0

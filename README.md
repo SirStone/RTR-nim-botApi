@@ -66,9 +66,9 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [x] have a "run" method
 - [x] open WebSocket to Server to start the connection handshake
 - [x] find out how to call a method that can be overridden from a new bot
-- [ ] find elegant method to convert between json and Messages object
+- [x] find elegant method to convert between json and Messages object
 - [ ] implement all Messages objects
-- [ ] connect to server completing the handshake
+- [x] connect to server completing the handshake
 - [ ] implement all bot methods to be overriden
 - [ ] write bash launcher (maybe with input functionality for wich json to open)
 - [ ] complete standard bot bits and bobs necessary to make a working version 1.0.0

@@ -7,7 +7,7 @@ type
     `type`*: Type
 
   InitialPosition* = ref object of RootObj
-    x,y, angle: float #The x,y and angle coordinate. When it is not set, a random value will be used
+    x*,y*, angle*: float #The x,y and angle coordinate. When it is not set, a random value will be used
 
   ServerHandshake* = ref object of Message
     sessionId*: string #Unique session id used for identifying the caller client (bot, controller, observer) connection.
@@ -21,12 +21,12 @@ type
     name*: string #Name of bot, e.g. Killer Bee
     version*: string #Bot version, e.g. 1.0
     authors*: seq[string] #Name of authors, e.g. John Doe (john_doe@somewhere.net)
-    description*: string #Short description of the bot, preferable a one-liner
-    homepage*: string #URL to a home page for the bot
-    countryCodes*: seq[string] #2-letter country code(s) defined by ISO 3166-1, e.g. "UK"
-    gameTypes*: seq[string] #Game types supported by this bot (defined elsewhere), e.g. "classic", "melee" and "1v1"
-    platform*: string #Platform used for running the bot, e.g. JVM 17 or .NET 5
-    programmingLang*: string #Language used for programming the bot, e.g. Java 17 or C# 10
-    initialPosition*: InitialPosition #Initial start position of the bot used for debugging
-    secret*: string #Secret used for access control with the server
+    # description*: string #Short description of the bot, preferable a one-liner
+    # homepage*: string #URL to a home page for the bot
+    # countryCodes*: seq[string] #2-letter country code(s) defined by ISO 3166-1, e.g. "UK"
+    # gameTypes*: seq[string] #Game types supported by this bot (defined elsewhere), e.g. "classic", "melee" and "1v1"
+    # platform*: string #Platform used for running the bot, e.g. JVM 17 or .NET 5
+    # programmingLang*: string #Language used for programming the bot, e.g. Java 17 or C# 10
+    # initialPosition*: InitialPosition #Initial start position of the bot used for debugging
+    # secret*: string #Secret used for access control with the server
   
