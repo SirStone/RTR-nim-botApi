@@ -7,7 +7,7 @@
 
 import unittest
 import jsony, json, times
-import std/os
+import std/os, std/strutils
 import RTR_nim_botApi/Messages
 import std/sugar
 import nimjson
@@ -46,22 +46,64 @@ test "can init bot":
   check new_bot.programmingLang == bot.programmingLang
 
 test "JSON <-> Message":
-  let json_message = """{"sessionId":"7vh2reL+TaeyXxEnN4Ngbg","name":"Robocode Tank Royale server","variant":"Tank Royale","version":"0.17.4","gameTypes":["classic","1v1"],"type":"ServerHandshake"}"""
-  
-  var t1:float = 0
-  let t0 = epochTime()
-  let `type` = json_message.fromJson(Message).`type`
-  case `type`:
-  of botHandshake:
-    let message:BotHandshake = json_message.fromJson(BotHandshake)
-    let json_message2 = message.toJson()
-    t1 = epochTime()
-    check message is BotHandshake
-    check json_message2 == json_message
-  of serverHandshake:
-    let message:ServerHandshake = json_message.fromJson(ServerHandshake)
-    let json_message2 = message.toJson()
-    t1 = epochTime()
-    check message is ServerHandshake
-    check json_message2 == json_message
-  echo "JSON-->object->JSON: ", t1 - t0
+  let json_messages = @[
+    """{"roundNumber":1,"enemyCount":1,"botState":{"energy":80.0,"x":418.66686836073654,"y":379.3486746531013,"direction":156.56947248748,"gunDirection":156.56947248748,"radarDirection":156.56947248748,"radarSweep":0.0,"speed":0.0,"turnRate":0.0,"gunTurnRate":0.0,"radarTurnRate":0.0,"gunHeat":0.0},"bulletStates":[{"bulletId":1,"ownerId":1,"power":1.0,"x":34.79070179011734,"y":579.340614094316,"direction":351.0,"color":"#008000"}],"events":[],"turnNumber":333,"type":"TickEventForBot"}""",
+    """{"sessionId":"7vh2reL+TaeyXxEnN4Ngbg","name":"Robocode Tank Royale server","variant":"Tank Royale","version":"0.17.4","gameTypes":["classic","1v1"],"type":"ServerHandshake"}""",
+    """{"type":"GameAbortedEvent"}""",
+    """{"turnNumber":332,"type":"SkippedTurnEvent"}""",
+    """{"roundNumber":1,"type":"RoundStartedEvent"}""",
+    """{"numberOfRounds":1,"results":{"rank":2,"survival":0,"lastSurvivorBonus":0,"bulletDamage":0,"bulletKillBonus":0,"ramDamage":0,"ramKillBonus":0,"totalScore":0,"firstPlaces":0,"secondPlaces":1,"thirdPlaces":0},"type":"GameEndedEventForBot"}"""
+  ]
+
+  for json_message in json_messages:
+    let `type` = json_message.fromJson(Message).`type`
+    case `type`:
+    of tickEventForBot:
+      let message_obj = json_message.fromJson(TickEventForBot)
+      let back_to_json = message_obj.toJson()
+      let back_to_obj = back_to_json.fromJson(TickEventForBot)
+      check back_to_obj is TickEventForBot
+      check back_to_obj.botState is BotState
+      check back_to_obj.bulletStates is seq[BulletState]
+      check back_to_obj.roundNumber == 1
+      check back_to_obj.enemyCount == 1 
+      check back_to_obj.botState.energy == 80.0
+      check back_to_obj.botState.x == 418.6668683607365 # here I've ignored the last digit
+      check back_to_obj.botState.y == 379.3486746531013
+      check back_to_obj.botState.direction == 156.56947248748
+      check back_to_obj.botState.gunDirection == 156.56947248748
+      check back_to_obj.botState.radarDirection == 156.56947248748
+      check back_to_obj.botState.radarSweep == 0.0
+      check back_to_obj.botState.speed == 0.0
+      check back_to_obj.botState.turnRate == 0.0
+      check back_to_obj.botState.gunTurnRate == 0.0
+      check back_to_obj.botState.gunHeat == 0.0
+      check back_to_obj.turnNumber == 333
+    of serverHandshake:
+      let message_obj = json_message.fromJson(ServerHandshake)
+      let back_to_json = message_obj.toJson()
+      let back_to_obj = back_to_json.fromJson(ServerHandshake)
+      check back_to_obj is ServerHandshake
+      check back_to_json == json_message
+    of gameAbortedEvent:
+      let message_obj = json_message.fromJson(GameAbortedEvent)
+      let back_to_json = message_obj.toJson()
+      let back_to_obj = back_to_json.fromJson(GameAbortedEvent)
+      check back_to_json == json_message
+    of skippedTurnEvent:
+      let message_obj = json_message.fromJson(SkippedTurnEvent)
+      let back_to_json = message_obj.toJson()
+      let back_to_obj = back_to_json.fromJson(SkippedTurnEvent)
+      check back_to_json == json_message
+    of roundStartedEvent:
+      let message_obj = json_message.fromJson(RoundStartedEvent)
+      let back_to_json = message_obj.toJson()
+      let back_to_obj = back_to_json.fromJson(RoundStartedEvent)
+      check back_to_json == json_message
+    of gameEndedEventForBot:
+      let message_obj = json_message.fromJson(GameEndedEventForBot)
+      let back_to_json = message_obj.toJson()
+      let back_to_obj = back_to_json.fromJson(GameEndedEventForBot)
+      check back_to_json == json_message
+    else:
+      echo "TODO:",json_message

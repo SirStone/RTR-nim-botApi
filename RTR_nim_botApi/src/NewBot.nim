@@ -12,5 +12,5 @@ var new_bot = NewBot()
 new_bot.initBot("new_bot.json")
 
 # STEP 5: start overriding the Bot methods
-method run(bot:NewBot, message:string) =
-  echo "OVERRIDE DONE!!! MESSAGE=" & message
+method run(bot:NewBot) =
+  echo "OVERRIDE DONE!!! MESSAGE"
