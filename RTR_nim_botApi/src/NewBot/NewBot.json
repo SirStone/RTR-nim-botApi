@@ -1,0 +1,11 @@
+{
+  "name": "test bot",
+  "version": "0.1.0",
+  "gameTypes": ["melee", "classic", "1v1"],
+  "authors": ["SirStone"],
+  "description": "bot used for testing the API",
+  "homepage": "",
+  "countryCodes": ["it"],
+  "platform": ["MacOS"],
+  "programmingLang": ["NIM"]
+}
