@@ -218,3 +218,5 @@ waitFor​(Condition condition) _#Blocks until a condition is met, i.e. when a 
 - [ ] implement all [IBot](https://robocode-dev.github.io/tank-royale/api/java/dev/robocode/tankroyale/botapi/IBot.html) methods
 - [x] write bash launcher (maybe with input functionality)
 - [ ] complete standard bot bits and bobs necessary to make a working version 1.0.0
+
+small chage to test new git repo
