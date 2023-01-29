@@ -7,6 +7,7 @@ type
 
 # STEP 3: istantiate a new object of the new type
 var new_bot = NewBot()
+RTR_nim_botApi.enableDebug()
 
 # STEP 4: start the bot calling for the initBot(json_file, connect[true/false]) proc
 new_bot.start("NewBot.json")

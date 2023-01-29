@@ -221,8 +221,8 @@ type
 type
   Bot* = ref object of RootObj
     # bot related
-    name*,version*,description*,homepage*,secret:string
-    gameTypes*,authors*,countryCodes*,platform*,programmingLang*:seq[string]
+    name*,version*,description*,homepage*,secret,platform*,programmingLang*:string
+    gameTypes*,authors*,countryCodes*:seq[string]
     gameSetup*:GameSetup
     tick*:TickEventForBot
     myId*: int
@@ -231,8 +231,15 @@ type
     bodyColor*,turretColor*,radarColor*,bulletColor*,scanColor*,tracksColor*,gunColor*:string
 
 
-
 var gs_address:string
+var debug_is_enabled = false
+
+proc debug(msg:string) =
+  if(debug_is_enabled): echo(msg)
+
+proc enableDebug*() = 
+  debug_is_enabled = true
+  debug("Debug messages enabled")
 
 method onGameAborted(bot:Bot, gameAbortedEvent:GameAbortedEvent) {.base.} = discard
 method onGameEnded(bot:Bot, gameEndedEventForBot:GameEndedEventForBot) {.base.} = discard
@@ -250,9 +257,11 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
   # case swtich over type
   case `type`:
   of serverHandshake:
+    debug("ServerHandshake received")
     let server_handshake = json_message.fromJson(ServerHandshake)
     let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret)
     await gs_ws.send(bot_handshake.toJson)
+    debug("ServerHandshake sent whit this secret:" & bot.secret)
   of gameStartedEventForBot:
     let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
     # store the Game Setup for the bot usage
@@ -331,7 +340,7 @@ proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
       discard handleMessage(bot, json_message, gs_ws)
 
   except WebSocketClosedError:
-    echo "Socket closed. "
+    echo "Socket closed. Check Server output, could be that a wrong secret have been used"
   except WebSocketProtocolMismatchError:
     echo "Socket tried to use an unknown protocol: ", getCurrentExceptionMsg()
   except WebSocketError:
@@ -339,7 +348,8 @@ proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
   except Exception:
     echo "Unexpected generic error: ", getCurrentExceptionMsg()
 
-proc start*(bot:Bot, json_file:string, connect:bool = true) = 
+proc start*(bot:Bot, json_file:string, connect:bool = true) =
+  debug("Building BOT from JSON file")
   let bot2 = readFile(joinPath(getAppDir(),json_file)).fromJson(Bot)
   bot.name = bot2.name
   bot.version = bot2.version
@@ -354,11 +364,15 @@ proc start*(bot:Bot, json_file:string, connect:bool = true) =
   bot.rescan = false
   bot.fireAssist = false
 
+  debug("connect is " & $connect)
   
   # connect to the Game Server
   if(connect):
+    debug("connecting, SERVER_URL is " & $existsEnv("SERVER_URL"))
+
     # for custom values, first parameter is address, second is the port
-    if(existsEnv("SERVER_URL")):
-      gs_address = getEnv("SERVER_URL", "localhost:7654")
+    gs_address = getEnv("SERVER_URL", "ws://localhost:7654")
+  
+    debug("Connetting to " & gs_address)
     
-      waitFor talkWithGS(bot, gs_address)
+    waitFor talkWithGS(bot, gs_address)

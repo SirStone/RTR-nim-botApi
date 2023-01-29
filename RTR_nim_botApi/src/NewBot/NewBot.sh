@@ -5,19 +5,21 @@ script_dir=$(dirname "$0")
 script_name=$(basename "$0")
 
 # create ENVs if provided
-if [ -z "$1" ]
-    then
-        echo "No argument supplied"
-    else
-        export SERVER_URL=$1
-fi
+print_usage() {
+  printf "Usage: [-p IP:PORT] [-s BOT-SECRET]"
+}
 
-if [ -z "$2" ]
-    then
-        echo "No argument supplied"
-    else
-        export SERVER_SECRET=$2
-fi
+while getopts 'u:s:' flag; do
+  case "${flag}" in
+    u) export SERVER_URL="ws://${OPTARG}" ;;
+    s) export SERVER_SECRET="${OPTARG}" ;;
+    *) print_usage
+       exit 1 ;;
+  esac
+done
+
+echo $SERVER_URL
+echo $SERVER_SECRET
 
 # Remove the extension from the file name
 bot_name=${script_name%.*}

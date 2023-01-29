@@ -6,6 +6,6 @@
   "description": "bot used for testing the API",
   "homepage": "",
   "countryCodes": ["it"],
-  "platform": ["MacOS"],
-  "programmingLang": ["NIM"]
+  "platform": "MacOS",
+  "programmingLang": "NIM"
 }
