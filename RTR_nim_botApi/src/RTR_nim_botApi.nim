@@ -2,32 +2,32 @@
 # exports the main API in this file. Note that you cannot rename this file
 # but you can remove it if you wish.
 
-import jsony
+import jsony, json
 import std/os, std/strutils
 import asyncdispatch, ws
 
 type
   Type* = enum
     botHandshake = "BotHandshake",
-    serverHandshake = "ServerHandshake"
-    botReady = "BotReady"
-    botIntent = "BotIntent"
-    gameStartedEventForBot = "GameStartedEventForBot"
-    gameEndedEventForBot = "GameEndedEventForBot"
-    gameAbortedEvent = "GameAbortedEvent"
-    roundStartedEvent = "RoundStartedEvent"
-    roundEndedEvent = "RoundEndedEvent"
-    botDeathEvent = "BotDeathEvent"
-    botHitBotEvent = "BotHitBotEvent"
-    botHitWallEvent = "BotHitWallEvent"
-    bulletFiredEvent = "BulletFiredEvent"
-    bulletHitBotEvent = "BulletHitBotEvent"
-    bulletHitBulletEvent = "BulletHitBulletEvent"
-    bulletHitWallEvent = "BulletHitWallEvent"
-    hitByBulletEvent = "HitByBulletEvent"
-    scannedBotEvent = "ScannedBotEvent"
-    skippedTurnEvent = "SkippedTurnEvent"
-    tickEventForBot = "TickEventForBot"
+    serverHandshake = "ServerHandshake",
+    botReady = "BotReady",
+    botIntent = "BotIntent",
+    gameStartedEventForBot = "GameStartedEventForBot",
+    gameEndedEventForBot = "GameEndedEventForBot",
+    gameAbortedEvent = "GameAbortedEvent",
+    roundStartedEvent = "RoundStartedEvent",
+    roundEndedEvent = "RoundEndedEvent",
+    botDeathEvent = "BotDeathEvent",
+    botHitBotEvent = "BotHitBotEvent",
+    botHitWallEvent = "BotHitWallEvent",
+    bulletFiredEvent = "BulletFiredEvent",
+    bulletHitBotEvent = "BulletHitBotEvent",
+    bulletHitBulletEvent = "BulletHitBulletEvent",
+    bulletHitWallEvent = "BulletHitWallEvent",
+    hitByBulletEvent = "HitByBulletEvent",
+    scannedBotEvent = "ScannedBotEvent",
+    skippedTurnEvent = "SkippedTurnEvent",
+    tickEventForBot = "TickEventForBot",
     wonRoundEvent = "WonRoundEvent"
   
   Message* = ref object of RootObj
@@ -214,7 +214,7 @@ type
     enemyCount*: int #Number of enemies left in the current round
     botState*: BotState #Current state of this bot
     bulletStates*: seq[BulletState] #Current state of the bullets fired by this bot
-    events*: seq[Event] #Events occurring in the turn relevant for this bot
+    events*: JsonNode #Events occurring in the turn relevant for this bot
 
   WonRoundEvent* = ref object of Event
 
@@ -254,7 +254,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
   # get the type of the message from the message itself
   let `type` = json_message.fromJson(Message).`type`
 
-  # case swtich over type
+  # 'case' switch over type
   case `type`:
   of serverHandshake:
     debug("ServerHandshake received")
@@ -285,14 +285,13 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
 
     # for every event inside this tick call the relative event for the bot
     for event in tick_event_for_bot.events:
-      echo "NOT HANDLED BOT EVENT: ",event[]
-      # let event_type = event.fromJson(Message).`type` 
-      # case event_type:
-      # of bulletHitBotEvent:
-      #   bot.onHitByBullet(item.fromJson(HitByBulletEvent))
-      # of botHitWallEvent:
-      #   bot.onHitWall​(item.fromJson(BotHitWallEvent))
-      # else: echo "NOT HANDLED BOT EVENT: ",item
+      case parseEnum[Type](event["type"].getStr()):
+      of Type.botHitWallEvent:
+        bot.onHitWall​(fromJson($event, BotHitWallEvent))
+        # TODO: add all tick events, what for the "NOT HANDLED BOT TICK EVENT" appearing in game
+      else:
+        echo "NOT HANDLED BOT TICK EVENT: ", event
+
     
     # send intent
     let bot_intent = BotIntent(`type`: Type.botIntent, turnRate:0, gunTurnRate:0, radarTurnRate:0, targetSpeed:8, firePower:3, adjustGunForBodyTurn:bot.adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.adjustRadarForGunTurn, rescan:bot.rescan, fireAssist:bot.fireAssist, bodyColor:bot.bodyColor, turretColor:bot.turretColor, radarColor:bot.radarColor, bulletColor:bot.bulletColor, scanColor:bot.scanColor, tracksColor:bot.tracksColor, gunColor:bot.gunColor)
