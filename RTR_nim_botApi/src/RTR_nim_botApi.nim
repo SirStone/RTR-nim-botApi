@@ -187,9 +187,10 @@ type
   RoundStartedEvent* = ref object of Message
     roundNumber*: int #The current round number in the battle when event occurred
 
-  RoundEndedEvent* = ref object of Message
+  RoundEndedEventForBot* = ref object of Message
     roundNumber*: int #The current round number in the battle when event occurred
     turnNumber*: int #The current turn number in the round when event occurred
+    results*: BotResultsForBot #The accumulated bot results by the end of the round.
 
   ScannedBotEvent* = ref object of Event
     scannedByBotId*: int #ID of the bot did the scanning
@@ -245,10 +246,13 @@ method onGameAborted(bot:Bot, gameAbortedEvent:GameAbortedEvent) {.base.} = disc
 method onGameEnded(bot:Bot, gameEndedEventForBot:GameEndedEventForBot) {.base.} = discard
 method onGameStarted(bot:Bot, gameStartedEventForBot:GameStartedEventForBot) {.base.} = discard
 method onHitByBullet(bot:Bot, hitByBulletEvent:HitByBulletEvent) {.base.} = discard
+method onHitBot(bot:Bot, botHitBotEvent:BotHitBotEvent) {.base.} = discard
 method onHitWall​(bot:Bot, botHitWallEvent:BotHitWallEvent) {.base.} = discard
 method onRoundStarted(bot:Bot, roundStartedEvent:RoundStartedEvent) {.base.} = discard
 method onSkippedTurn​(bot:Bot, skippedTurnEvent:SkippedTurnEvent) {.base.} = discard
+method onScannedBot(bot:Bot, scannedBotEvent:ScannedBotEvent) {.base.} = discard
 method onTick(bot:Bot, tickEventForBot:TickEventForBot) {.base.} = discard
+method onDeath​(bot:Bot, botDeathEvent​:BotDeathEvent) {.base.} =  discard
 
 proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsafe.} =
   # get the type of the message from the message itself
@@ -286,8 +290,16 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     # for every event inside this tick call the relative event for the bot
     for event in tick_event_for_bot.events:
       case parseEnum[Type](event["type"].getStr()):
+      of Type.botDeathEvent:
+        bot.onDeath​(fromJson($event, BotDeathEvent))
       of Type.botHitWallEvent:
         bot.onHitWall​(fromJson($event, BotHitWallEvent))
+      of Type.bulletHitBotEvent:
+        bot.onHitByBullet(fromJson($event, HitByBulletEvent))
+      of Type.botHitBotEvent:
+        bot.onHitBot(fromJson($event, BotHitBotEvent))
+      of Type.scannedBotEvent:
+        bot.onScannedBot(fromJson($event, ScannedBotEvent))        
         # TODO: add all tick events, what for the "NOT HANDLED BOT TICK EVENT" appearing in game
       else:
         echo "NOT HANDLED BOT TICK EVENT: ", event

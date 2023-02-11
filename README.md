@@ -38,24 +38,24 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
     - [x] send [bot-ready](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-ready.yaml) to Server
 - [ ] Running turns of the game
     - [x] receive [round-started-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/round-started-event.yaml) from Server
-    - [ ] receive [round-ended-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/round-ended-event.yaml) from Server
-    - [ ] receive [tick-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/tick-event-for-bot.yaml) from Server
-    - [ ] receive [skipped-turn-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/skipped-turn-event.yaml) from Server
-    - [ ] send [bot-intent](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-intent.yaml) to Server
+    - [ ] receive [round-ended-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/round-ended-event-for-bot.yaml) from Server
+    - [x] receive [tick-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/tick-event-for-bot.yaml) from Server
+    - [x] receive [skipped-turn-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/skipped-turn-event.yaml) from Server
+    - [x] send [bot-intent](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-intent.yaml) to Server
 - [ ] end of the Game
     - [x] receive [game-ended-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/game-ended-event-for-bot.yaml)
     - [ ] receive [won-round-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/won-round-event.yaml)
 - [ ] in-game events
     - [x] receive [game-aborted-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/game-aborted-event.yaml) from Server
-    - [ ] receive [bot-death-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-death-event.yaml) from Server when a bot dies
-    - [ ] receive [bot-hit-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-hit-bot-event.yaml) from Server when our bot collides with another bot
-    - [ ] receive [bot-hit-wall-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-hit-wall-event.yaml) from Server when our bot collides with a wall
+    - [x] receive [bot-death-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-death-event.yaml) from Server when a bot dies
+    - [x] receive [bot-hit-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-hit-bot-event.yaml) from Server when our bot collides with another bot
+    - [x] receive [bot-hit-wall-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-hit-wall-event.yaml) from Server when our bot collides with a wall
     - [ ] receive [bullet-fired-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bullet-fired-event.yaml) from Server when our bot fires a bullet
-    - [ ] receive [bullet-hit-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bullet-hit-bot-event.yaml) from Server when our bullet has hit a bot
+    - [x] receive [bullet-hit-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bullet-hit-bot-event.yaml) from Server when our bullet has hit a bot
     - [ ] receive [bullet-hit-bullet-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bullet-hit-bullet-event.yaml) from Server when our bullet collided with another bullet
     - [ ] receive [bullet-hit-wall-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bullet-hit-wall-event.yaml) from Server when our bullet has hit the wall
     - [ ] receive [hit-by-bullet-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/hit-by-bullet-event.yaml) from Server when our bot has been hit by a bullet
-    - [ ] receive [scanned-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/scanned-bot-event.yaml) from Server when our bot has scanned another bot
+    - [s] receive [scanned-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/scanned-bot-event.yaml) from Server when our bot has scanned another bot
     - [x] receive [skipped-turn-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/skipped-turn-event.yaml) from Server when our bot skipped a turn (the intent was not received at the server in time)
     - [x] receive [tick-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/tick-event-for-bot.yaml) from Server when a new turn is about to begin
     - [ ] receive [won-round-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/won-round-event.yaml) from Server
@@ -131,18 +131,18 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [ ] onConnected​(ConnectedEvent connectedEvent) _#The event handler triggered when connected to the server._
 - [ ] onConnectionError​(ConnectionErrorEvent connectionErrorEvent) _#The event handler triggered when a connection error occurs._
 - [ ] onCustomEvent​(CustomEvent customEvent) _#The event handler triggered when some condition has been met._
-- [ ] onDeath​(DeathEvent deathEvent) _#The event handler triggered when this bot has died._
+- [x] onDeath​(DeathEvent deathEvent) _#The event handler triggered when this bot has died._
 - [ ] onDisconnected​(DisconnectedEvent disconnectedEvent) _#The event handler triggered when disconnected from the server._
-- [ ] onGameEnded​(GameEndedEvent gameEndedEvent) _#The event handler triggered when a game has ended._
-- [ ] onGameStarted​(GameStartedEvent gameStatedEvent) _#The event handler triggered when a game has started._
-- [ ] onHitBot​(HitBotEvent botHitBotEvent) _#The event handler triggered when the bot has collided with another bot._
-- [ ] onHitByBullet​(HitByBulletEvent hitByBulletEvent) _#The event handler triggered when the bot has been hit by a bullet._
-- [ ] onHitWall​(HitWallEvent botHitWallEvent) _#The event handler triggered when the bot has hit a wall._
+- [x] onGameEnded​(GameEndedEvent gameEndedEvent) _#The event handler triggered when a game has ended._
+- [x] onGameStarted​(GameStartedEvent gameStatedEvent) _#The event handler triggered when a game has started._
+- [x] onHitBot​(HitBotEvent botHitBotEvent) _#The event handler triggered when the bot has collided with another bot._
+- [x] onHitByBullet​(HitByBulletEvent hitByBulletEvent) _#The event handler triggered when the bot has been hit by a bullet._
+- [x] onHitWall​(HitWallEvent botHitWallEvent) _#The event handler triggered when the bot has hit a wall._
 - [ ] onRoundEnded​(RoundEndedEvent roundEndedEvent) _#The event handler triggered when a round has ended._
 - [x] onRoundStarted​(RoundStartedEvent roundStartedEvent) _#The event handler triggered when a new round has started._
-- [ ] onScannedBot​(ScannedBotEvent scannedBotEvent) _#The event handler triggered when the bot has skipped a turn._
+- [x] onScannedBot​(ScannedBotEvent scannedBotEvent) _#The event handler triggered when the bot has skipped a turn._
 - [x] onSkippedTurn​(SkippedTurnEvent skippedTurnEvent) _#The event handler triggered when the bot has skipped a turn._
-- [ ] onTick​(TickEvent tickEvent) _#The event handler triggered when a game tick event occurs, ie., when a new turn in a round has started._
+- [x] onTick​(TickEvent tickEvent) _#The event handler triggered when a game tick event occurs, ie., when a new turn in a round has started._
 - [ ] onWonRound​(WonRoundEvent wonRoundEvent) _#The event handler triggered when the bot has won a round._
 - [ ] radarBearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the botÂ´s radar and the direction to the point x,y._
 - [ ] removeCustomEvent​(Condition condition) _#Removes triggering a custom event handler for a specific condition that was previously added with addCustomEvent(dev.robocode.tankroyale.botapi.events.Condition)._
