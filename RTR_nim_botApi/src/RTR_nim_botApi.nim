@@ -242,6 +242,8 @@ proc enableDebug*() =
   debug_is_enabled = true
   debug("Debug messages enabled")
 
+method run(bot:Bot) {.base thread.} = discard 
+
 method onGameAborted(bot:Bot, gameAbortedEvent:GameAbortedEvent) {.base.} = discard
 method onGameEnded(bot:Bot, gameEndedEventForBot:GameEndedEventForBot) {.base.} = discard
 method onGameStarted(bot:Bot, gameStartedEventForBot:GameStartedEventForBot) {.base.} = discard
@@ -253,6 +255,8 @@ method onSkippedTurn​(bot:Bot, skippedTurnEvent:SkippedTurnEvent) {.base.} = d
 method onScannedBot(bot:Bot, scannedBotEvent:ScannedBotEvent) {.base.} = discard
 method onTick(bot:Bot, tickEventForBot:TickEventForBot) {.base.} = discard
 method onDeath​(bot:Bot, botDeathEvent​:BotDeathEvent) {.base.} =  discard
+method onConnected​(bot:Bot, url:string) {.base.} = discard
+method onConnectionError​(bot:Bot, error:string) {.base.} = discard
 
 proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsafe.} =
   # get the type of the message from the message itself
@@ -332,11 +336,17 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     # activating the bot method
     bot.onRoundStarted(round_started_event)
 
+    # starting run() thread
+    bot.run()
+
   else: echo "NOT HANDLED MESSAGE: ",json_message
 
 proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
   try: # try a websocket connection to server
     var gs_ws = await newWebSocket(url)
+
+    if(gs_ws.readyState == Open):
+      bot.onConnected​(url)
 
     # while the connection is open...
     while(gs_ws.readyState == Open):
@@ -350,14 +360,15 @@ proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
       # send the message to an handler 
       discard handleMessage(bot, json_message, gs_ws)
 
-  except WebSocketClosedError:
-    echo "Socket closed. Check Server output, could be that a wrong secret have been used"
-  except WebSocketProtocolMismatchError:
-    echo "Socket tried to use an unknown protocol: ", getCurrentExceptionMsg()
-  except WebSocketError:
-    echo "Unexpected socket error: ", getCurrentExceptionMsg()
+  # except WebSocketClosedError:
+  #   let error = "Socket closed. Check Server output, could be that a wrong secret have been used"
+  #   # bot.onConnectionError​(error)
+  # except WebSocketProtocolMismatchError:
+  #   let error = "Socket tried to use an unknown protocol: ", getCurrentExceptionMsg()
+  # except WebSocketError:
+  #   let error = "Unexpected socket error: ", getCurrentExceptionMsg()
   except Exception:
-    echo "Unexpected generic error: ", getCurrentExceptionMsg()
+    bot.onConnectionError​(getCurrentExceptionMsg())
 
 proc start*(bot:Bot, json_file:string, connect:bool = true) =
   debug("Building BOT from JSON file")

@@ -6,7 +6,7 @@ script_name=$(basename "$0")
 
 # create ENVs if provided
 print_usage() {
-  printf "Usage: [-p IP:PORT] [-s BOT-SECRET]"
+  printf "Usage: [-u IP:PORT] [-s BOT-SECRET]"
 }
 
 while getopts 'u:s:' flag; do

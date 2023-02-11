@@ -128,8 +128,8 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [ ] onBulletHit​(BulletHitBotEvent bulletHitBotEvent) _#The event handler triggered when the bot has hit another bot with a bullet._
 onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event handler triggered when a bullet fired from the bot has collided with another bullet._
 - [ ] onBulletHitWall​(BulletHitWallEvent bulletHitWallEvent) _#The event handler triggered when a bullet has hit a wall._
-- [ ] onConnected​(ConnectedEvent connectedEvent) _#The event handler triggered when connected to the server._
-- [ ] onConnectionError​(ConnectionErrorEvent connectionErrorEvent) _#The event handler triggered when a connection error occurs._
+- [x] onConnected​(ConnectedEvent connectedEvent) _#The event handler triggered when connected to the server._
+- [x] onConnectionError​(ConnectionErrorEvent connectionErrorEvent) _#The event handler triggered when a connection error occurs._
 - [ ] onCustomEvent​(CustomEvent customEvent) _#The event handler triggered when some condition has been met._
 - [x] onDeath​(DeathEvent deathEvent) _#The event handler triggered when this bot has died._
 - [ ] onDisconnected​(DisconnectedEvent disconnectedEvent) _#The event handler triggered when disconnected from the server._
