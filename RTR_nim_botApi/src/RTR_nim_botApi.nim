@@ -3,7 +3,7 @@
 # but you can remove it if you wish.
 
 import jsony, json
-import std/os, std/strutils
+import std/[os, strutils, threadpool, locks]
 import asyncdispatch, ws
 
 type
@@ -231,19 +231,8 @@ type
     rescan*,fireAssist*:bool
     bodyColor*,turretColor*,radarColor*,bulletColor*,scanColor*,tracksColor*,gunColor*:string
 
-
-var gs_address:string
-var debug_is_enabled = false
-
-proc debug(msg:string) =
-  if(debug_is_enabled): echo(msg)
-
-proc enableDebug*() = 
-  debug_is_enabled = true
-  debug("Debug messages enabled")
-
-method run(bot:Bot) {.base thread.} = discard 
-
+# the following section contains all the methods that are supposed to be overrided by the bot creator
+method run(bot:Bot) {.base.} = discard
 method onGameAborted(bot:Bot, gameAbortedEvent:GameAbortedEvent) {.base.} = discard
 method onGameEnded(bot:Bot, gameEndedEventForBot:GameEndedEventForBot) {.base.} = discard
 method onGameStarted(bot:Bot, gameStartedEventForBot:GameStartedEventForBot) {.base.} = discard
@@ -257,6 +246,26 @@ method onTick(bot:Bot, tickEventForBot:TickEventForBot) {.base.} = discard
 method onDeath​(bot:Bot, botDeathEvent​:BotDeathEvent) {.base.} =  discard
 method onConnected​(bot:Bot, url:string) {.base.} = discard
 method onConnectionError​(bot:Bot, error:string) {.base.} = discard
+
+var gs_address:string
+var debug_is_enabled = false
+var runlock: Lock
+var running {.guard: runlock.}:bool
+
+proc debug(msg:string) =
+  if(debug_is_enabled): echo(msg)
+
+proc enableDebug*() = 
+  debug_is_enabled = true
+  debug("Debug messages enabled")
+
+proc isRunning*(bot:Bot):bool =
+  {.locks: [runlock].}:
+    return running
+
+proc stopBot() = 
+  {.locks: [runlock].}: running = false
+  sync()
 
 proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsafe.} =
   # get the type of the message from the message itself
@@ -295,6 +304,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     for event in tick_event_for_bot.events:
       case parseEnum[Type](event["type"].getStr()):
       of Type.botDeathEvent:
+        stopBot()
         bot.onDeath​(fromJson($event, BotDeathEvent))
       of Type.botHitWallEvent:
         bot.onHitWall​(fromJson($event, BotHitWallEvent))
@@ -313,12 +323,16 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     let bot_intent = BotIntent(`type`: Type.botIntent, turnRate:0, gunTurnRate:0, radarTurnRate:0, targetSpeed:8, firePower:3, adjustGunForBodyTurn:bot.adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.adjustRadarForGunTurn, rescan:bot.rescan, fireAssist:bot.fireAssist, bodyColor:bot.bodyColor, turretColor:bot.turretColor, radarColor:bot.radarColor, bulletColor:bot.bulletColor, scanColor:bot.scanColor, tracksColor:bot.tracksColor, gunColor:bot.gunColor)
     await gs_ws.send(bot_intent.toJson)
   of gameAbortedEvent:
+    stopBot()
+
     let game_aborted_event = json_message.fromJson(GameAbortedEvent)
 
       # activating the bot method
     bot.onGameAborted(game_aborted_event)
 
   of gameEndedEventForBot:
+    stopBot()
+
     let game_ended_event_for_bot = json_message.fromJson(GameEndedEventForBot)
 
     # activating the bot method
@@ -337,7 +351,10 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     bot.onRoundStarted(round_started_event)
 
     # starting run() thread
-    bot.run()
+    {.locks: [runlock].}:running = true
+    debug("triying to set running=true")
+    debug($bot.isRunning())
+    spawn run(bot)
 
   else: echo "NOT HANDLED MESSAGE: ",json_message
 

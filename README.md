@@ -181,7 +181,7 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [ ] getGunTurnRemaining() _#Returns the remaining turn in degrees till the gun has finished turning after having called IBot.setTurnGunLeft(double), IBot.setTurnGunRight(double), IBot.turnGunLeft(double), or IBot.turnGunRight(double)._
 - [ ] getRadarTurnRemaining() _#Returns the remaining turn in degrees till the radar has finished turning after having called IBot.setTurnRadarLeft(double), IBot.setTurnRadarRight(double), IBot.turnRadarLeft(double), or IBot.turnRadarRight(double)._
 - [ ] getTurnRemaining() _#Returns the remaining turn in degrees till the bot has finished turning after having called IBot.setTurnLeft(double), IBot.setTurnRight(double), IBot.turnLeft(double), or IBot.turnRight(double)._
-- [ ] isRunning() _#Checks if this bot is running._
+- [x] isRunning() _#Checks if this bot is running._
 - [ ] rescan() 	_#Scan (again) with the radar._
 - [ ] resume() 	_#Resume the movement prior to calling the IBaseBot.setStop() or IBot.stop() method._
 - [ ] setBack​(double distance) _#Set the bot to move backward until it has traveled a specific distance from its current position, or it is moving into an obstacle._

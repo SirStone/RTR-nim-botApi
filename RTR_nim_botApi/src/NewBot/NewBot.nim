@@ -1,5 +1,6 @@
 # STEP 1: import the module
 import ../RTR_nim_botApi
+import std/[os, random]
 
 # STEP 2: create a new object reference of Bot object
 type
@@ -12,9 +13,15 @@ RTR_nim_botApi.enableDebug()
 # STEP 4: start the bot calling for the initBot(json_file, connect[true/false]) proc
 new_bot.start("NewBot.json")
 
-# method run(bot:NewBot) = 
-#   while(true):
-#     echo "running from bot"
+method run(bot:NewBot) =
+  randomize()
+  let num = rand(100000)
+  var i = 0
+  while(bot.isRunning()):
+    sleep(1000)
+    echo $num," running is " & $bot.isRunning() & "->" & $i
+    i = i+1
+  echo $num," stopped running"
 
 method onSkippedTurn​(bot:NewBot, skipped_turn_event:SkippedTurnEvent) =
   if(false):
@@ -41,7 +48,7 @@ method onTick(bot:NewBot, tick_event_for_bot:TickEventForBot) =
     echo "TICK:",tick_event_for_bot[]
 
 method onGameAborted(bot:NewBot, game_aborted_event:GameAbortedEvent) =
-  if(false):
+  if(true):
     echo "Game aborted"
 
 method onDeath​(bot:NewBot, bot_death_event:BotDeathEvent) = 
@@ -57,7 +64,7 @@ method onHitBot(bot:NewBot, bot_hit_bot_event:BotHitBotEvent) =
     echo "HIT BOT:",bot_hit_bot_event[]
 
 method onHitByBullet(bot:NewBot, hit_by_bullet_event:HitByBulletEvent) = 
-  if(true):
+  if(false):
     echo "OUCH:",hit_by_bullet_event[]
     echo "BULLET:",hit_by_bullet_event.bullet[]
 
