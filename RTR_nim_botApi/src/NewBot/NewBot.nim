@@ -14,16 +14,22 @@ RTR_nim_botApi.enableDebug()
 new_bot.start("NewBot.json")
 
 method run(bot:NewBot) =
+  # bot.setAdjustGunForBodyTurn(true)
+  # bot.setAdjustRadarForGunTurn(true)
+  # bot.setAdjustRadarForBodyTurn(true)
+
+  echo "NEW BOT " ,new_bot[]
+
   randomize()
   let num = rand(100000)
   var i = 0
-  while(bot.isRunning()):
+  while(new_bot.isRunning()):
     sleep(1000)
-    echo $num," running is " & $bot.isRunning() & "->" & $i
+    echo $num," running is " & $new_bot.isRunning() & "->" & $i
     i = i+1
   echo $num," stopped running"
 
-method onSkippedTurn​(bot:NewBot, skipped_turn_event:SkippedTurnEvent) =
+method onSkippedTurn(bot:NewBot, skipped_turn_event:SkippedTurnEvent) =
   if(false):
     echo "skipped turn number ",skipped_turn_event.turnNumber
 
@@ -51,11 +57,11 @@ method onGameAborted(bot:NewBot, game_aborted_event:GameAbortedEvent) =
   if(true):
     echo "Game aborted"
 
-method onDeath​(bot:NewBot, bot_death_event:BotDeathEvent) = 
+method onDeath(bot:NewBot, bot_death_event:BotDeathEvent) = 
   if(false):
     echo "BOT DEAD:",bot_death_event[]
 
-method onHitWall​(bot:NewBot, bot_hit_wall_event:BotHitWallEvent) = 
+method onHitWall(bot:NewBot, bot_hit_wall_event:BotHitWallEvent) = 
   if(false):
     echo "HIT WALL:",bot_hit_wall_event[]
 
@@ -72,11 +78,11 @@ method onScannedBot(bot:NewBot, scanned_bot_event:ScannedBotEvent) =
   if(false):
     echo "SCAN:",scanned_bot_event[]
 
-method onConnectionError​(bot:NewBot, error:string) = 
+method onConnectionError(bot:NewBot, error:string) = 
   if(true):
     echo "Connection error: ",error
     echo "Bot not started"
 
-method onConnected​(bot:NewBot, url:string) =
+method onConnected(bot:NewBot, url:string) =
   if(true):
     echo "connected successfully @ ",url

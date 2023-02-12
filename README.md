@@ -62,7 +62,7 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 
 ### IBaseBot methods to implement
 - [ ] addCustomEvent​(Condition condition) _#Adds an event handler that will be automatically triggered onCustomEvent(dev.robocode.tankroyale.botapi.events.CustomEvent) when the Condition.test() returns true._
-- [ ] bearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the botÂ´s body and the direction to the point x,y._
+- [ ] bearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the bot's body and the direction to the point x,y._
 - [ ] calcBearing​(double direction) _#Calculates the bearing (delta angle) between the input direction and the direction of this bot._
 - [ ] calcBulletSpeed​(double firepower) _#Calculates the bullet speed given a fire power._
 - [ ] calcDeltaAngle​(double targetAngle, double sourceAngle) _#Calculates the difference between two angles, i.e. the number of degrees from a source angle to a target angle._
@@ -73,12 +73,12 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [ ] clearEvents() _#Clears the remaining events that have not been processed yet._
 - [ ] directionTo​(double x, double y) _#Calculates the direction (angle) from the bot´s coordinates to a point x,y._
 - [ ] distanceTo​(double x, double y) _#Calculates the distance from the bot's coordinates to a point x,y._
-- [ ] getArenaHeight() _#Height of the arena measured in units._
-- [ ] getArenaWidth() _#Width of the arena measured in units._
+- [x] getArenaHeight() _#Height of the arena measured in units._
+- [x] getArenaWidth() _#Width of the arena measured in units._
 - [ ] getBodyColor() _#Returns the color of the body._
 - [ ] getBulletColor() _#Returns the color of the fired bullets._
 - [ ] getBulletStates() _#Current bullet states._
-- [ ] getDirection() _#Current driving direction of the bot in degrees._
+- [x] getDirection() _#Current driving direction of the bot in degrees._
 - [ ] getEnemyCount() _#Number of enemies left in the round._
 - [ ] getEnergy() _#Current energy level._
 - [ ] getEventPriority​(java.lang.Class<BotEvent> eventClass) _#Returns the event priority for a specific event class._
@@ -116,7 +116,7 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [ ] getY() _#Current Y coordinate of the center of the bot._
 - [ ] go() _#Commits the current commands (actions), which finalizes the current turn for the bot._
 - [ ] gunBearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the bot's gun and the direction to the point x,y._
-- [ ] isAdjustGunForBodyTurn() _#Checks if the gun is set to adjust for the bot turning, i.e. to turn independent of the botÂ´s body turn._
+- [ ] isAdjustGunForBodyTurn() _#Checks if the gun is set to adjust for the bot turning, i.e. to turn independent of the bot's body turn._
 - [ ] isAdjustRadarForBodyTurn() _#Checks if the radar is set to adjust for the body turning, i.e. to turn independent of the body's turn._
 - [ ] isAdjustRadarForGunTurn() _#Checks if the radar is set to adjust for the gun turning, i.e. to turn independent of the gun's turn._
 - [ ] isDisabled() _#Specifies if the bot is disabled, i.e., when the energy is zero._
@@ -144,17 +144,17 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [x] onSkippedTurn​(SkippedTurnEvent skippedTurnEvent) _#The event handler triggered when the bot has skipped a turn._
 - [x] onTick​(TickEvent tickEvent) _#The event handler triggered when a game tick event occurs, ie., when a new turn in a round has started._
 - [ ] onWonRound​(WonRoundEvent wonRoundEvent) _#The event handler triggered when the bot has won a round._
-- [ ] radarBearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the botÂ´s radar and the direction to the point x,y._
+- [ ] radarBearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the bot's radar and the direction to the point x,y._
 - [ ] removeCustomEvent​(Condition condition) _#Removes triggering a custom event handler for a specific condition that was previously added with addCustomEvent(dev.robocode.tankroyale.botapi.events.Condition)._
-- [ ] setAdjustGunForBodyTurn​(boolean adjust) _#Sets the gun to adjust for the botÂ´s turn when setting the gun turn rate._
-- [ ] setAdjustRadarForBodyTurn​(boolean adjust) _#Sets the radar to adjust for the body's turn when setting the radar turn rate._
-- [ ] setAdjustRadarForGunTurn​(boolean adjust) _#Sets the radar to adjust for the gun's turn when setting the radar turn rate._
-- [ ] setBodyColor​(Color color) _#Sets the color of the body._
-- [ ] setBulletColor​(Color color) _#Sets the color of the fired bullets._
+- [x] setAdjustGunForBodyTurn​(boolean adjust) _#Sets the gun to adjust for the bot's turn when setting the gun turn rate._
+- [x] setAdjustRadarForBodyTurn​(boolean adjust) _#Sets the radar to adjust for the body's turn when setting the radar turn rate._
+- [x] setAdjustRadarForGunTurn​(boolean adjust) _#Sets the radar to adjust for the gun's turn when setting the radar turn rate._
+- [x] setBodyColor​(Color color) _#Sets the color of the body._
+- [x] setBulletColor​(Color color) _#Sets the color of the fired bullets._
 - [ ] setEventPriority​(java.lang.Class<BotEvent> eventClass, int priority) _#Changes the event priority for an event class._
 - [ ] setFire​(double firepower) _#Sets the gun to fire in the direction that the gun is pointing with the specified firepower._
 - [ ] setFireAssist​(boolean enable) _#Enables or disables fire assistance explicitly._
-- [ ] setGunColor​(Color color) _#Sets the color of the gun._
+- [x] setGunColor​(Color color) _#Sets the color of the gun._
 - [ ] setGunTurnRate​(double gunTurnRate) _#Sets the turn rate of the gun, which can be positive and negative._
 - [ ] setInterruptible​(boolean interruptible) _#Call this method during an event handler to control continuing or restarting the event handler, when a new event occurs again for the same event handler while processing an earlier event._
 - [ ] setMaxGunTurnRate​(double maxGunTurnRate) _#Sets the maximum turn rate which applies to turn the gun to the left or right._
@@ -202,7 +202,7 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [ ] turnLeft​(double degrees) _#Turn the bot to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
 - [ ] turnRadarLeft​(double degrees) _#Turn the radar to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
 - [ ] turnRadarRight​(double degrees) _#Turn the radar to the right (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] turnRight​(double degrees) _#Turn the bot to the right (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] turnRight​(double degrees) _#Turn the bot to the right (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
 waitFor​(Condition condition) _#Blocks until a condition is met, i.e. when a Condition.test() returns true._
 
 ### planned TODO

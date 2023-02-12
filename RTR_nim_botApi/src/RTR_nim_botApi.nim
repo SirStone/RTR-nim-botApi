@@ -3,31 +3,36 @@
 # but you can remove it if you wish.
 
 import jsony, json
-import std/[os, strutils, threadpool, locks]
+import std/[os, strutils, threadpool, locks, math]
 import asyncdispatch, ws
 
 type
+  Color* = enum
+    BLACK = "#000000"
+    ORANGE = "#ff8300"
+    CYAN = "#00f3ff"
+
   Type* = enum
-    botHandshake = "BotHandshake",
-    serverHandshake = "ServerHandshake",
-    botReady = "BotReady",
-    botIntent = "BotIntent",
-    gameStartedEventForBot = "GameStartedEventForBot",
-    gameEndedEventForBot = "GameEndedEventForBot",
-    gameAbortedEvent = "GameAbortedEvent",
-    roundStartedEvent = "RoundStartedEvent",
-    roundEndedEvent = "RoundEndedEvent",
-    botDeathEvent = "BotDeathEvent",
-    botHitBotEvent = "BotHitBotEvent",
-    botHitWallEvent = "BotHitWallEvent",
-    bulletFiredEvent = "BulletFiredEvent",
-    bulletHitBotEvent = "BulletHitBotEvent",
-    bulletHitBulletEvent = "BulletHitBulletEvent",
-    bulletHitWallEvent = "BulletHitWallEvent",
-    hitByBulletEvent = "HitByBulletEvent",
-    scannedBotEvent = "ScannedBotEvent",
-    skippedTurnEvent = "SkippedTurnEvent",
-    tickEventForBot = "TickEventForBot",
+    botHandshake = "BotHandshake"
+    serverHandshake = "ServerHandshake"
+    botReady = "BotReady"
+    botIntent = "BotIntent"
+    gameStartedEventForBot = "GameStartedEventForBot"
+    gameEndedEventForBot = "GameEndedEventForBot"
+    gameAbortedEvent = "GameAbortedEvent"
+    roundStartedEvent = "RoundStartedEvent"
+    roundEndedEvent = "RoundEndedEvent"
+    botDeathEvent = "BotDeathEvent"
+    botHitBotEvent = "BotHitBotEvent"
+    botHitWallEvent = "BotHitWallEvent"
+    bulletFiredEvent = "BulletFiredEvent"
+    bulletHitBotEvent = "BulletHitBotEvent"
+    bulletHitBulletEvent = "BulletHitBulletEvent"
+    bulletHitWallEvent = "BulletHitWallEvent"
+    hitByBulletEvent = "HitByBulletEvent"
+    scannedBotEvent = "ScannedBotEvent"
+    skippedTurnEvent = "SkippedTurnEvent"
+    tickEventForBot = "TickEventForBot"
     wonRoundEvent = "WonRoundEvent"
   
   Message* = ref object of RootObj
@@ -230,6 +235,7 @@ type
     adjustGunForBodyTurn*,adjustRadarForBodyTurn*,adjustRadarForGunTurn*:bool
     rescan*,fireAssist*:bool
     bodyColor*,turretColor*,radarColor*,bulletColor*,scanColor*,tracksColor*,gunColor*:string
+    intent:BotIntent
 
 # the following section contains all the methods that are supposed to be overrided by the bot creator
 method run(bot:Bot) {.base.} = discard
@@ -238,20 +244,66 @@ method onGameEnded(bot:Bot, gameEndedEventForBot:GameEndedEventForBot) {.base.} 
 method onGameStarted(bot:Bot, gameStartedEventForBot:GameStartedEventForBot) {.base.} = discard
 method onHitByBullet(bot:Bot, hitByBulletEvent:HitByBulletEvent) {.base.} = discard
 method onHitBot(bot:Bot, botHitBotEvent:BotHitBotEvent) {.base.} = discard
-method onHitWall​(bot:Bot, botHitWallEvent:BotHitWallEvent) {.base.} = discard
+method onHitWall(bot:Bot, botHitWallEvent:BotHitWallEvent) {.base.} = discard
 method onRoundStarted(bot:Bot, roundStartedEvent:RoundStartedEvent) {.base.} = discard
-method onSkippedTurn​(bot:Bot, skippedTurnEvent:SkippedTurnEvent) {.base.} = discard
+method onSkippedTurn(bot:Bot, skippedTurnEvent:SkippedTurnEvent) {.base.} = discard
 method onScannedBot(bot:Bot, scannedBotEvent:ScannedBotEvent) {.base.} = discard
 method onTick(bot:Bot, tickEventForBot:TickEventForBot) {.base.} = discard
-method onDeath​(bot:Bot, botDeathEvent​:BotDeathEvent) {.base.} =  discard
-method onConnected​(bot:Bot, url:string) {.base.} = discard
-method onConnectionError​(bot:Bot, error:string) {.base.} = discard
+method onDeath(bot:Bot, botDeathEvent:BotDeathEvent) {.base.} =  discard
+method onConnected(bot:Bot, url:string) {.base.} = discard
+method onConnectionError(bot:Bot, error:string) {.base.} = discard
 
+# system variables
 var gs_address:string
 var debug_is_enabled = false
 var runlock: Lock
 var running {.guard: runlock.}:bool
+var firstTickSeen:bool = false
 
+# API callable procs
+proc isRunning*(bot:Bot):bool =
+  {.locks: [runlock].}:
+    return running
+
+proc setAdjustGunForBodyTurn*(bot:Bot, adjust:bool) =
+  bot.adjustGunForBodyTurn = adjust
+
+proc setAdjustRadarForGunTurn*(bot:Bot, adjust:bool) =
+  bot.adjustRadarForGunTurn = adjust
+
+proc setAdjustRadarForBodyTurn*(bot:Bot, adjust:bool) =
+  bot.adjustRadarForBodyTurn = adjust
+
+proc setBodyColor*(bot:Bot, color:Color) = 
+  bot.bodyColor = $color
+
+proc setTurretColor*(bot:Bot, color:Color) = 
+  bot.turretColor = $color
+
+proc setRadarColor*(bot:Bot, color:Color) = 
+  bot.radarColor = $color
+
+proc setBulletColor*(bot:Bot, color:Color) = 
+  bot.bulletColor = $color
+
+proc setScanColor*(bot:Bot, color:Color) = 
+  bot.scanColor = $color
+
+proc getArenaWidth*(bot:Bot):int =
+  return bot.gameSetup.arenaWidth
+
+proc getArenaHeight*(bot:Bot):int =
+  return bot.gameSetup.arenaHeight
+
+proc getDirection*(bot:Bot):float =
+  return bot.tick.botState.direction
+
+proc turnRight*(bot:Bot, degrees:float) = 
+  bot.intent.turnRate = degrees
+
+proc forward*(bot:Bot, degrees:float) = discard #TODO
+
+# system procs
 proc debug(msg:string) =
   if(debug_is_enabled): echo(msg)
 
@@ -259,13 +311,9 @@ proc enableDebug*() =
   debug_is_enabled = true
   debug("Debug messages enabled")
 
-proc isRunning*(bot:Bot):bool =
-  {.locks: [runlock].}:
-    return running
-
 proc stopBot() = 
   {.locks: [runlock].}: running = false
-  sync()
+  sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
 
 proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsafe.} =
   # get the type of the message from the message itself
@@ -292,10 +340,18 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     let bot_ready = BotReady(`type`:Type.botReady)
     await gs_ws.send(bot_ready.toJson)
   of tickEventForBot:
+    bot.intent = BotIntent(`type`: Type.botIntent, turnRate:0, gunTurnRate:0, radarTurnRate:0, targetSpeed:8, firePower:0, adjustGunForBodyTurn:bot.adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.adjustRadarForGunTurn, rescan:bot.rescan, fireAssist:bot.fireAssist, bodyColor:bot.bodyColor, turretColor:bot.turretColor, radarColor:bot.radarColor, bulletColor:bot.bulletColor, scanColor:bot.scanColor, tracksColor:bot.tracksColor, gunColor:bot.gunColor)
+
     let tick_event_for_bot = json_message.fromJson(TickEventForBot)
 
     # TODO: store this in a more fruible way
     bot.tick = tick_event_for_bot
+
+    # starting run() thread at first tick seen
+    if(not firstTickSeen):
+      {.locks: [runlock].}:running = true
+      spawn run(bot)
+      firstTickSeen = true
 
     # activating the bot method
     bot.onTick(tick_event_for_bot)
@@ -305,9 +361,9 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
       case parseEnum[Type](event["type"].getStr()):
       of Type.botDeathEvent:
         stopBot()
-        bot.onDeath​(fromJson($event, BotDeathEvent))
+        bot.onDeath(fromJson($event, BotDeathEvent))
       of Type.botHitWallEvent:
-        bot.onHitWall​(fromJson($event, BotHitWallEvent))
+        bot.onHitWall(fromJson($event, BotHitWallEvent))
       of Type.bulletHitBotEvent:
         bot.onHitByBullet(fromJson($event, HitByBulletEvent))
       of Type.botHitBotEvent:
@@ -320,8 +376,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
 
     
     # send intent
-    let bot_intent = BotIntent(`type`: Type.botIntent, turnRate:0, gunTurnRate:0, radarTurnRate:0, targetSpeed:8, firePower:3, adjustGunForBodyTurn:bot.adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.adjustRadarForGunTurn, rescan:bot.rescan, fireAssist:bot.fireAssist, bodyColor:bot.bodyColor, turretColor:bot.turretColor, radarColor:bot.radarColor, bulletColor:bot.bulletColor, scanColor:bot.scanColor, tracksColor:bot.tracksColor, gunColor:bot.gunColor)
-    await gs_ws.send(bot_intent.toJson)
+    await gs_ws.send(bot.intent.toJson)
   of gameAbortedEvent:
     stopBot()
 
@@ -342,19 +397,13 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     let skipped_turn_event = json_message.fromJson(SkippedTurnEvent)
     
     # activating the bot method
-    bot.onSkippedTurn​(skipped_turn_event)
+    bot.onSkippedTurn(skipped_turn_event)
 
   of roundStartedEvent:
     let round_started_event = json_message.fromJson(RoundStartedEvent)
 
     # activating the bot method
     bot.onRoundStarted(round_started_event)
-
-    # starting run() thread
-    {.locks: [runlock].}:running = true
-    debug("triying to set running=true")
-    debug($bot.isRunning())
-    spawn run(bot)
 
   else: echo "NOT HANDLED MESSAGE: ",json_message
 
@@ -363,7 +412,7 @@ proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
     var gs_ws = await newWebSocket(url)
 
     if(gs_ws.readyState == Open):
-      bot.onConnected​(url)
+      bot.onConnected(url)
 
     # while the connection is open...
     while(gs_ws.readyState == Open):
@@ -379,13 +428,13 @@ proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
 
   # except WebSocketClosedError:
   #   let error = "Socket closed. Check Server output, could be that a wrong secret have been used"
-  #   # bot.onConnectionError​(error)
+  #   # bot.onConnectionError(error)
   # except WebSocketProtocolMismatchError:
   #   let error = "Socket tried to use an unknown protocol: ", getCurrentExceptionMsg()
   # except WebSocketError:
   #   let error = "Unexpected socket error: ", getCurrentExceptionMsg()
   except Exception:
-    bot.onConnectionError​(getCurrentExceptionMsg())
+    bot.onConnectionError(getCurrentExceptionMsg())
 
 proc start*(bot:Bot, json_file:string, connect:bool = true) =
   debug("Building BOT from JSON file")
