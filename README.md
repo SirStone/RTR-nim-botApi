@@ -38,7 +38,7 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
     - [x] send [bot-ready](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-ready.yaml) to Server
 - [ ] Running turns of the game
     - [x] receive [round-started-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/round-started-event.yaml) from Server
-    - [ ] receive [round-ended-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/round-ended-event-for-bot.yaml) from Server
+    - [x] receive [round-ended-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/round-ended-event-for-bot.yaml) from Server
     - [x] receive [tick-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/tick-event-for-bot.yaml) from Server
     - [x] receive [skipped-turn-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/skipped-turn-event.yaml) from Server
     - [x] send [bot-intent](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bot-intent.yaml) to Server
@@ -54,7 +54,7 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
     - [x] receive [bullet-hit-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bullet-hit-bot-event.yaml) from Server when our bullet has hit a bot
     - [ ] receive [bullet-hit-bullet-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bullet-hit-bullet-event.yaml) from Server when our bullet collided with another bullet
     - [ ] receive [bullet-hit-wall-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/bullet-hit-wall-event.yaml) from Server when our bullet has hit the wall
-    - [ ] receive [hit-by-bullet-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/hit-by-bullet-event.yaml) from Server when our bot has been hit by a bullet
+    - [x] receive [hit-by-bullet-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/hit-by-bullet-event.yaml) from Server when our bot has been hit by a bullet
     - [x] receive [scanned-bot-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/scanned-bot-event.yaml) from Server when our bot has scanned another bot
     - [x] receive [skipped-turn-event](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/skipped-turn-event.yaml) from Server when our bot skipped a turn (the intent was not received at the server in time)
     - [x] receive [tick-event-for-bot](https://github.com/robocode-dev/tank-royale/blob/master/schema/schemas/tick-event-for-bot.yaml) from Server when a new turn is about to begin

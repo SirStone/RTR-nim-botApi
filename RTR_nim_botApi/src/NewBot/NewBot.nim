@@ -18,7 +18,7 @@ method run(bot:NewBot) =
   # bot.setAdjustRadarForGunTurn(true)
   # bot.setAdjustRadarForBodyTurn(true)
 
-  echo "NEW BOT " ,new_bot[]
+  # echo "NEW BOT " ,new_bot[]
 
   randomize()
   let num = rand(100000)
@@ -41,8 +41,13 @@ method onGameStarted(bot:NewBot, game_started_event_for_bot:GameStartedEventForB
     echo bot.gameSetup[]
 
 method onRoundStarted(bot:NewBot, round_started_event:RoundStartedEvent) =
-  if(false):
+  if(true):
     echo "round ",round_started_event.roundNumber," started"
+
+method onRoundEnded(bot:NewBot, round_ended_event_for_bot:RoundEndedEventForBot) =
+  if(true):
+    echo "round ",round_ended_event_for_bot.roundNumber," ended"
+    echo "ROUND SCORE: ", round_ended_event_for_bot.results[]
 
 method onGameEnded(bot:NewBot, game_ended_event_for_bot:GameEndedEventForBot) =
   if(false):
@@ -70,7 +75,7 @@ method onHitBot(bot:NewBot, bot_hit_bot_event:BotHitBotEvent) =
     echo "HIT BOT:",bot_hit_bot_event[]
 
 method onHitByBullet(bot:NewBot, hit_by_bullet_event:HitByBulletEvent) = 
-  if(false):
+  if(true):
     echo "OUCH:",hit_by_bullet_event[]
     echo "BULLET:",hit_by_bullet_event.bullet[]
 

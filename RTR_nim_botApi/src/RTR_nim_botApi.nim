@@ -22,6 +22,7 @@ type
     gameAbortedEvent = "GameAbortedEvent"
     roundStartedEvent = "RoundStartedEvent"
     roundEndedEvent = "RoundEndedEvent"
+    roundEndedEventForBot = "RoundEndedEventForBot"
     botDeathEvent = "BotDeathEvent"
     botHitBotEvent = "BotHitBotEvent"
     botHitWallEvent = "BotHitWallEvent"
@@ -245,6 +246,7 @@ method onGameStarted(bot:Bot, gameStartedEventForBot:GameStartedEventForBot) {.b
 method onHitByBullet(bot:Bot, hitByBulletEvent:HitByBulletEvent) {.base.} = discard
 method onHitBot(bot:Bot, botHitBotEvent:BotHitBotEvent) {.base.} = discard
 method onHitWall(bot:Bot, botHitWallEvent:BotHitWallEvent) {.base.} = discard
+method onRoundEnded(bot:Bot, roundEndedEventForBot:RoundEndedEventForBot) {.base.} = discard
 method onRoundStarted(bot:Bot, roundStartedEvent:RoundStartedEvent) {.base.} = discard
 method onSkippedTurn(bot:Bot, skippedTurnEvent:SkippedTurnEvent) {.base.} = discard
 method onScannedBot(bot:Bot, scannedBotEvent:ScannedBotEvent) {.base.} = discard
@@ -313,9 +315,11 @@ proc enableDebug*() =
 
 proc stopBot() = 
   {.locks: [runlock].}: running = false
+  firstTickSeen = false
   sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
 
 proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsafe.} =
+  # debug(json_message)
   # get the type of the message from the message itself
   let `type` = json_message.fromJson(Message).`type`
 
@@ -327,6 +331,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret)
     await gs_ws.send(bot_handshake.toJson)
     debug("ServerHandshake sent whit this secret:" & bot.secret)
+  
   of gameStartedEventForBot:
     let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
     # store the Game Setup for the bot usage
@@ -339,6 +344,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     # send bot ready
     let bot_ready = BotReady(`type`:Type.botReady)
     await gs_ws.send(bot_ready.toJson)
+
   of tickEventForBot:
     bot.intent = BotIntent(`type`: Type.botIntent, turnRate:0, gunTurnRate:0, radarTurnRate:0, targetSpeed:8, firePower:0, adjustGunForBodyTurn:bot.adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.adjustRadarForGunTurn, rescan:bot.rescan, fireAssist:bot.fireAssist, bodyColor:bot.bodyColor, turretColor:bot.turretColor, radarColor:bot.radarColor, bulletColor:bot.bulletColor, scanColor:bot.scanColor, tracksColor:bot.tracksColor, gunColor:bot.gunColor)
 
@@ -365,7 +371,10 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
       of Type.botHitWallEvent:
         bot.onHitWall(fromJson($event, BotHitWallEvent))
       of Type.bulletHitBotEvent:
-        bot.onHitByBullet(fromJson($event, HitByBulletEvent))
+        # conversion from BulletHitBotEvent to HitByBulletEvent
+        let hit_by_bullet_event = fromJson($event, HitByBulletEvent)
+        hit_by_bullet_event.`type` = Type.hitByBulletEvent
+        bot.onHitByBullet(hit_by_bullet_event)
       of Type.botHitBotEvent:
         bot.onHitBot(fromJson($event, BotHitBotEvent))
       of Type.scannedBotEvent:
@@ -398,6 +407,14 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     
     # activating the bot method
     bot.onSkippedTurn(skipped_turn_event)
+
+  of roundEndedEventForBot:
+    stopBot()
+
+    let round_ended_event_for_bot = json_message.fromJson(RoundEndedEventForBot)
+
+    # activating the bot method
+    bot.onRoundEnded(round_ended_event_for_bot)
 
   of roundStartedEvent:
     let round_started_event = json_message.fromJson(RoundStartedEvent)
