@@ -1,0 +1,53 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "command": "bash",
+    // "args": [
+    //     "-c"
+    // ],
+    "options": {
+        "cwd": "RTR_nim_botApi"
+    },
+    "tasks": [
+        {
+            "label": "build NewBot",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "src/buildScripts/build_NewBot.sh"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "build Walls",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "src/buildScripts/build_Walls.sh"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "test all",
+            "type": "shell",
+            "command": "nimble",
+            "args": [
+                "test"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
