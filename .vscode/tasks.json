@@ -41,7 +41,7 @@
             "type": "shell",
             "command": "nimble",
             "args": [
-                "test"
+                "test","--threads:on"
             ],
             "problemMatcher": [],
             "group": {

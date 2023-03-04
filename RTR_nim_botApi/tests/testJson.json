@@ -1,0 +1,11 @@
+{
+  "name": "test json file",
+  "version": "1.0.0",
+  "gameTypes": ["melee", "classic", "1v1"],
+  "authors": ["SirStone"],
+  "description": "file used for testing",
+  "homepage": "",
+  "countryCodes": ["it"],
+  "platform": "MacOS",
+  "programmingLang": "NIM"
+}

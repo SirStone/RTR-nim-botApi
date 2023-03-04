@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.10.0"
+version       = "0.10.1"
 author        = "SirStone"
 description   = "Robocode Tankroyal BotApi in Nim"
 license       = "AGPL-3.0-or-/later"
