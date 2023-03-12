@@ -1,17 +1,35 @@
 # standard libraries
-import std/[os, strutils, threadpool, math]
+import std/[os, strutils, random, sugar, threadpool]
 
 # 3rd party libraries
 import asyncdispatch, ws, jsony, json
 
 # local components
-import RTR_nim_botApi/Components/[Bot, Messages, Colors]
+import RTR_nim_botApi/Components/[Bot, Messages]
+export Bot, Messages
 
 # system variables
 var gs_address:string
 var debug_is_enabled = false
-var running:bool
+var running2*:bool
 var firstTickSeen:bool = false
+var lastTurnWeSentIntent:int = -1
+var sendIntent:bool = false
+var gs_ws:WebSocket
+
+## GAME VARAIBLES
+# game setup
+var gameSetup:GameSetup
+# my ID for the server
+var myId: int
+# tick data for Bot
+var turnNumber*,roundNumber:int
+var energy,x,y,direction,gunDirection,radarDirection,radarSweep,speed,turnRate,gunTurnRate,radarTurnRate,gunHeat:float
+
+# intent
+var intent_turnRate,intent_gunTurnRate,intent_radarTurnRate,intent_targetSpeed,intent_firepower:float
+var intent_adjustGunForBodyTurn,intent_adjustRadarForGunTurn,intent_adjustRadarForBodyTurn,intent_rescan,intent_fireAssist:bool
+var intent_bodyColor,intent_turretColor,intent_radarColor,intent_bulletColor,intent_scanColor,intent_tracksColor,intent_gunColor:string
 
 # the following section contains all the methods that are supposed to be overrided by the bot creator
 method run(bot:Bot) {.base.} = discard
@@ -34,44 +52,47 @@ proc setSecret*(bot:Bot, s:string) =
   bot.secret = s
 
 # API callable procs
-proc isRunning*(bot:Bot):bool =
-  return running
+proc isRunning*():bool =
+  return running2
 
 proc setAdjustGunForBodyTurn*(bot:Bot, adjust:bool) =
-  bot.adjustGunForBodyTurn = adjust
+  intent_adjustGunForBodyTurn = adjust
 
 proc setAdjustRadarForGunTurn*(bot:Bot, adjust:bool) =
-  bot.adjustRadarForGunTurn = adjust
+  intent_adjustRadarForGunTurn = adjust
 
 proc setAdjustRadarForBodyTurn*(bot:Bot, adjust:bool) =
-  bot.adjustRadarForBodyTurn = adjust
+  intent_adjustRadarForBodyTurn = adjust
 
-proc setBodyColor*(bot:Bot, color:Color) = 
-  bot.bodyColor = $color
+proc setBodyColor*(bot:Bot, color:string) = 
+  intent_bodyColor = $color
 
-proc setTurretColor*(bot:Bot, color:Color) = 
-  bot.turretColor = $color
+proc setTurretColor*(bot:Bot, color:string) = 
+  intent_turretColor = $color
 
-proc setRadarColor*(bot:Bot, color:Color) = 
-  bot.radarColor = $color
+proc setRadarColor*(bot:Bot, color:string) = 
+  intent_radarColor = $color
 
-proc setBulletColor*(bot:Bot, color:Color) = 
-  bot.bulletColor = $color
+proc setBulletColor*(bot:Bot, color:string) = 
+  intent_bulletColor = $color
 
-proc setScanColor*(bot:Bot, color:Color) = 
-  bot.scanColor = $color
+proc setScanColor*(bot:Bot, color:string) = 
+  intent_scanColor = $color
 
 proc getArenaWidth*(bot:Bot):int =
-  return bot.gameSetup.arenaWidth
+  return gameSetup.arenaWidth
 
 proc getArenaHeight*(bot:Bot):int =
-  return bot.gameSetup.arenaHeight
+  return gameSetup.arenaHeight
 
-proc getDirection*(bot:Bot):float =
-  return bot.tick.botState.direction
+proc getDirection*():float =
+  return direction
 
-proc turnRight*(bot:Bot, degrees:float) = 
-  bot.intent.turnRate = degrees
+proc getTurnNumber*():int =
+  return turnNumber
+
+proc turnRight*(degrees:float) = 
+  intent_turnRate = degrees
 
 proc forward*(bot:Bot, degrees:float) = discard #TODO
 
@@ -83,13 +104,47 @@ proc enableDebug*() =
   debug_is_enabled = true
   debug("Debug messages enabled")
 
+proc go*() =
+  if lastTurnWeSentIntent < turnNumber:
+    lastTurnWeSentIntent = turnNumber
+    sendIntent = true
+
+proc echoAddress*[T](x:T) =
+  echo cast[uint](x.unsafeAddr).toHex
+
+proc sendIntentLoop() {.async.} =
+  while(running2):
+    if sendIntent:
+      sendIntent = false
+      let intent = BotIntent(`type`: Type.botIntent, turnRate:intent_turnRate, gunTurnRate:intent_gunTurnRate, radarTurnRate:intent_radarTurnRate, targetSpeed:intent_targetSpeed, firePower:intent_firePower, adjustGunForBodyTurn:intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:intent_adjustRadarForGunTurn, rescan:intent_rescan, fireAssist:intent_fireAssist, bodyColor:intent_bodyColor, turretColor:intent_turretColor, radarColor:intent_radarColor, bulletColor:intent_bulletColor, scanColor:intent_scanColor, tracksColor:intent_tracksColor, gunColor:intent_gunColor)
+      await gs_ws.send(intent.toJson)
+
+      #reset the intent variables
+      intent_turnRate = 0
+      intent_gunTurnRate = 0
+      intent_radarTurnRate = 0
+      intent_targetSpeed = 0
+      intent_firePower = 0
+            
+    else:
+      await sleepAsync(10)
+  debug("sendIntentLoop stopped")
+
+proc runAsync(bot:Bot) {.thread.} =
+  bot.run()
+
+  while isRunning():
+    # turnRight(-10)
+    go()
+
 proc stopBot() = 
-  running = false
+  echo "Stopping bot"
+  running2 = false
   firstTickSeen = false
+  lastTurnWeSentIntent = -1
   sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
 
-proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsafe.} =
-  # debug(json_message)
+proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
   # get the type of the message from the message itself
   let `type` = json_message.fromJson(Message).`type`
 
@@ -105,8 +160,8 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
   of gameStartedEventForBot:
     let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
     # store the Game Setup for the bot usage
-    bot.gameSetup = game_started_event_for_bot.gameSetup
-    bot.myId = game_started_event_for_bot.myId
+    gameSetup = game_started_event_for_bot.gameSetup
+    myId = game_started_event_for_bot.myId
 
     # activating the bot method
     bot.onGameStarted(game_started_event_for_bot)
@@ -116,17 +171,43 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
     await gs_ws.send(bot_ready.toJson)
 
   of tickEventForBot:
-    bot.intent = BotIntent(`type`: Type.botIntent, turnRate:0, gunTurnRate:0, radarTurnRate:0, targetSpeed:8, firePower:0, adjustGunForBodyTurn:bot.adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.adjustRadarForGunTurn, rescan:bot.rescan, fireAssist:bot.fireAssist, bodyColor:bot.bodyColor, turretColor:bot.turretColor, radarColor:bot.radarColor, bulletColor:bot.bulletColor, scanColor:bot.scanColor, tracksColor:bot.tracksColor, gunColor:bot.gunColor)
+    # bot.intent = BotIntent(`type`: Type.botIntent, turnRate:90, gunTurnRate:0, radarTurnRate:0, targetSpeed:0, firePower:0, adjustGunForBodyTurn:bot.adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.adjustRadarForGunTurn, rescan:bot.rescan, fireAssist:bot.fireAssist, bodyColor:bot.bodyColor, turretColor:bot.turretColor, radarColor:bot.radarColor, bulletColor:bot.bulletColor, scanColor:bot.scanColor, tracksColor:bot.tracksColor, gunColor:bot.gunColor)
 
     let tick_event_for_bot = json_message.fromJson(TickEventForBot)
 
-    # TODO: store this in a more fruible way
-    bot.tick = tick_event_for_bot
+    # store the tick data for bot in local variables
+    turnNumber = tick_event_for_bot.turnNumber
+    roundNumber = tick_event_for_bot.roundNumber
+    energy = tick_event_for_bot.botState.energy
+    x = tick_event_for_bot.botState.x
+    y = tick_event_for_bot.botState.y
+    direction = tick_event_for_bot.botState.direction
+    gunDirection = tick_event_for_bot.botState.gunDirection
+    radarDirection = tick_event_for_bot.botState.radarDirection
+    radarSweep = tick_event_for_bot.botState.radarSweep
+    speed = tick_event_for_bot.botState.speed
+    turnRate = tick_event_for_bot.botState.turnRate
+    gunHeat = tick_event_for_bot.botState.gunHeat
+    radarTurnRate = tick_event_for_bot.botState.radarTurnRate
+    gunTurnRate = tick_event_for_bot.botState.gunTurnRate
+    gunHeat = tick_event_for_bot.botState.gunHeat
+
+    # about colors, we are intent to keep the same color as the previous tick
+    intent_bodyColor = tick_event_for_bot.botState.bodyColor
+    intent_turretColor = tick_event_for_bot.botState.turretColor
+    intent_radarColor = tick_event_for_bot.botState.radarColor
+    intent_bulletColor = tick_event_for_bot.botState.bulletColor
+    intent_scanColor = tick_event_for_bot.botState.scanColor
+    intent_tracksColor = tick_event_for_bot.botState.tracksColor
+    intent_gunColor = tick_event_for_bot.botState.gunColor
 
     # starting run() thread at first tick seen
     if(not firstTickSeen):
-      running = true
-      spawn run(bot)
+      running2 = true
+      echo "Starting run"
+      spawn runAsync(bot)
+      asyncCheck sendIntentLoop()
+      echo "Run started"
       firstTickSeen = true
 
     # activating the bot method
@@ -155,7 +236,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
 
     
     # send intent
-    await gs_ws.send(bot.intent.toJson)
+    # await gs_ws.send(bot.intent.toJson)
   of gameAbortedEvent:
     stopBot()
 
@@ -194,9 +275,9 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async, gcsaf
 
   else: echo "NOT HANDLED MESSAGE: ",json_message
 
-proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
+proc talkWithGS(bot:Bot, url:string) {.async.} =
   try: # try a websocket connection to server
-    var gs_ws = await newWebSocket(url)
+    gs_ws = await newWebSocket(url)
 
     if(gs_ws.readyState == Open):
       bot.onConnected(url)
@@ -211,7 +292,7 @@ proc talkWithGS(bot:Bot, url:string) {.async, gcsafe.} =
       if json_message.isEmptyOrWhitespace(): continue
 
       # send the message to an handler 
-      discard handleMessage(bot, json_message, gs_ws)
+      asyncCheck handleMessage(bot, json_message, gs_ws)
 
   # except WebSocketClosedError:
   #   let error = "Socket closed. Check Server output, could be that a wrong secret have been used"
@@ -237,8 +318,8 @@ proc newBot*(bot:Bot, json_file:string) =
   bot.platform = bot2.platform
   bot.programmingLang = bot2.programmingLang
   bot.secret = getEnv("SERVER_SECRET", "serversecret")
-  bot.rescan = false
-  bot.fireAssist = false
+  intent_rescan = false
+  intent_fireAssist = false
 
 proc start*(bot:Bot, connect:bool = true) =
 
@@ -252,7 +333,7 @@ proc start*(bot:Bot, connect:bool = true) =
     debug("connecting, SERVER_URL is " & $existsEnv("SERVER_URL"))
 
     # for custom values, first parameter is address, second is the port
-    gs_address = getEnv("SERVER_URL", "ws://localhost:1234")
+    gs_address = getEnv("SERVER_URL", "ws://localhost:1536")
   
     debug("Connetting to " & gs_address)
     

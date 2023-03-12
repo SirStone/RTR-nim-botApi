@@ -1,5 +1,5 @@
 {
-  "name": "test json file",
+  "name": "TEST BOT",
   "version": "1.0.0",
   "gameTypes": ["melee", "classic", "1v1"],
   "authors": ["SirStone"],
