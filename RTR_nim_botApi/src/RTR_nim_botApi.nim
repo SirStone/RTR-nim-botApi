@@ -1,5 +1,5 @@
 # standard libraries
-import std/[os, strutils, random, sugar, threadpool]
+import std/[os, strutils, sugar, threadpool]
 
 # 3rd party libraries
 import asyncdispatch, ws, jsony, json
@@ -9,9 +9,8 @@ import RTR_nim_botApi/Components/[Bot, Messages]
 export Bot, Messages
 
 # system variables
-var gs_address:string
 var debug_is_enabled = false
-var running2*:bool
+var runningState*:bool
 var firstTickSeen:bool = false
 var lastTurnWeSentIntent:int = -1
 var sendIntent:bool = false
@@ -51,38 +50,41 @@ method onConnectionError(bot:Bot, error:string) {.base.} = discard
 proc setSecret*(bot:Bot, s:string) =
   bot.secret = s
 
+proc setServerURL*(bot:Bot, url:string) =
+  bot.serverConnectionURL = url
+
 # API callable procs
 proc isRunning*():bool =
-  return running2
+  return runningState
 
-proc setAdjustGunForBodyTurn*(bot:Bot, adjust:bool) =
+proc setAdjustGunForBodyTurn*(adjust:bool) =
   intent_adjustGunForBodyTurn = adjust
 
-proc setAdjustRadarForGunTurn*(bot:Bot, adjust:bool) =
+proc setAdjustRadarForGunTurn*(adjust:bool) =
   intent_adjustRadarForGunTurn = adjust
 
-proc setAdjustRadarForBodyTurn*(bot:Bot, adjust:bool) =
+proc setAdjustRadarForBodyTurn*(adjust:bool) =
   intent_adjustRadarForBodyTurn = adjust
 
-proc setBodyColor*(bot:Bot, color:string) = 
+proc setBodyColor*(color:string) = 
   intent_bodyColor = $color
 
-proc setTurretColor*(bot:Bot, color:string) = 
+proc setTurretColor*(color:string) = 
   intent_turretColor = $color
 
-proc setRadarColor*(bot:Bot, color:string) = 
+proc setRadarColor*(color:string) = 
   intent_radarColor = $color
 
-proc setBulletColor*(bot:Bot, color:string) = 
+proc setBulletColor*(color:string) = 
   intent_bulletColor = $color
 
-proc setScanColor*(bot:Bot, color:string) = 
+proc setScanColor*(color:string) = 
   intent_scanColor = $color
 
-proc getArenaWidth*(bot:Bot):int =
+proc getArenaWidth*():int =
   return gameSetup.arenaWidth
 
-proc getArenaHeight*(bot:Bot):int =
+proc getArenaHeight*():int =
   return gameSetup.arenaHeight
 
 proc getDirection*():float =
@@ -94,7 +96,7 @@ proc getTurnNumber*():int =
 proc turnRight*(degrees:float) = 
   intent_turnRate = degrees
 
-proc forward*(bot:Bot, degrees:float) = discard #TODO
+proc forward*(degrees:float) = discard #TODO
 
 # system procs
 proc debug(msg:string) =
@@ -113,7 +115,7 @@ proc echoAddress*[T](x:T) =
   echo cast[uint](x.unsafeAddr).toHex
 
 proc sendIntentLoop() {.async.} =
-  while(running2):
+  while(runningState):
     if sendIntent:
       sendIntent = false
       let intent = BotIntent(`type`: Type.botIntent, turnRate:intent_turnRate, gunTurnRate:intent_gunTurnRate, radarTurnRate:intent_radarTurnRate, targetSpeed:intent_targetSpeed, firePower:intent_firePower, adjustGunForBodyTurn:intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:intent_adjustRadarForGunTurn, rescan:intent_rescan, fireAssist:intent_fireAssist, bodyColor:intent_bodyColor, turretColor:intent_turretColor, radarColor:intent_radarColor, bulletColor:intent_bulletColor, scanColor:intent_scanColor, tracksColor:intent_tracksColor, gunColor:intent_gunColor)
@@ -133,13 +135,13 @@ proc sendIntentLoop() {.async.} =
 proc runAsync(bot:Bot) {.thread.} =
   bot.run()
 
+  echo "bot.run() finished, starting Api go loop"
   while isRunning():
-    # turnRight(-10)
     go()
+  echo "api go loop stopped"
 
 proc stopBot() = 
-  echo "Stopping bot"
-  running2 = false
+  runningState = false
   firstTickSeen = false
   lastTurnWeSentIntent = -1
   sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
@@ -158,6 +160,9 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
     debug("ServerHandshake sent whit this secret:" & bot.secret)
   
   of gameStartedEventForBot:
+    # in case the bot is still running from a previuos game we stop it
+    stopBot()
+
     let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
     # store the Game Setup for the bot usage
     gameSetup = game_started_event_for_bot.gameSetup
@@ -171,8 +176,6 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
     await gs_ws.send(bot_ready.toJson)
 
   of tickEventForBot:
-    # bot.intent = BotIntent(`type`: Type.botIntent, turnRate:90, gunTurnRate:0, radarTurnRate:0, targetSpeed:0, firePower:0, adjustGunForBodyTurn:bot.adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.adjustRadarForGunTurn, rescan:bot.rescan, fireAssist:bot.fireAssist, bodyColor:bot.bodyColor, turretColor:bot.turretColor, radarColor:bot.radarColor, bulletColor:bot.bulletColor, scanColor:bot.scanColor, tracksColor:bot.tracksColor, gunColor:bot.gunColor)
-
     let tick_event_for_bot = json_message.fromJson(TickEventForBot)
 
     # store the tick data for bot in local variables
@@ -203,11 +206,9 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
 
     # starting run() thread at first tick seen
     if(not firstTickSeen):
-      running2 = true
-      echo "Starting run"
+      runningState = true
       spawn runAsync(bot)
       asyncCheck sendIntentLoop()
-      echo "Run started"
       firstTickSeen = true
 
     # activating the bot method
@@ -230,19 +231,17 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
         bot.onHitBot(fromJson($event, BotHitBotEvent))
       of Type.scannedBotEvent:
         bot.onScannedBot(fromJson($event, ScannedBotEvent))        
-        # TODO: add all tick events, what for the "NOT HANDLED BOT TICK EVENT" appearing in game
       else:
         echo "NOT HANDLED BOT TICK EVENT: ", event
 
     
     # send intent
-    # await gs_ws.send(bot.intent.toJson)
   of gameAbortedEvent:
     stopBot()
 
     let game_aborted_event = json_message.fromJson(GameAbortedEvent)
 
-      # activating the bot method
+    # activating the bot method
     bot.onGameAborted(game_aborted_event)
 
   of gameEndedEventForBot:
@@ -294,13 +293,6 @@ proc talkWithGS(bot:Bot, url:string) {.async.} =
       # send the message to an handler 
       asyncCheck handleMessage(bot, json_message, gs_ws)
 
-  # except WebSocketClosedError:
-  #   let error = "Socket closed. Check Server output, could be that a wrong secret have been used"
-  #   # bot.onConnectionError(error)
-  # except WebSocketProtocolMismatchError:
-  #   let error = "Socket tried to use an unknown protocol: ", getCurrentExceptionMsg()
-  # except WebSocketError:
-  #   let error = "Unexpected socket error: ", getCurrentExceptionMsg()
   except Exception:
     debug("Exception: " & getCurrentExceptionMsg())
     bot.onConnectionError(getCurrentExceptionMsg())
@@ -330,11 +322,12 @@ proc start*(bot:Bot, connect:bool = true) =
     if bot.secret == "":
       bot.secret = getEnv("SERVER_SECRET", "serversecret")
 
-    debug("connecting, SERVER_URL is " & $existsEnv("SERVER_URL"))
+    if bot.serverConnectionURL == "":
+      bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
+
 
     # for custom values, first parameter is address, second is the port
-    gs_address = getEnv("SERVER_URL", "ws://localhost:1536")
   
-    debug("Connetting to " & gs_address)
+    debug("Connetting to " & bot.serverConnectionURL)
     
-    waitFor talkWithGS(bot, gs_address)
+    waitFor talkWithGS(bot, bot.serverConnectionURL)

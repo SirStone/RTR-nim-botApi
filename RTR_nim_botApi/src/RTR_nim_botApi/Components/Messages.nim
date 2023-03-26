@@ -16,9 +16,12 @@ type
     botDeathEvent = "BotDeathEvent"
     botHitBotEvent = "BotHitBotEvent"
     botHitWallEvent = "BotHitWallEvent"
+    botInfo = "BotInfo"
+    botListupdate = "BotListUpdate"
     bulletFiredEvent = "BulletFiredEvent"
     bulletHitBotEvent = "BulletHitBotEvent"
     bulletHitBulletEvent = "BulletHitBulletEvent"
+    controllerHandshake = "ControllerHandshake"
     bulletHitWallEvent = "BulletHitWallEvent"
     hitByBulletEvent = "HitByBulletEvent"
     scannedBotEvent = "ScannedBotEvent"
@@ -63,6 +66,10 @@ type
   BotHitWallEvent* = ref object of Event
     victimId*: int #ID of the victim bot that hit the wall
 
+  BotInfo* = ref object of BotHandshake
+    host*: string #Host name or IP address
+    port*: int #Port number
+
   BotIntent* = ref object of Message
     turnRate*: float #Turn rate of the body in degrees per turn (can be positive and negative)
     gunTurnRate*: float #Turn rate of the gun in degrees per turn (can be positive and negative)
@@ -81,6 +88,9 @@ type
     scanColor*: string #New color of the scan arc
     tracksColor*: string #New color of the tracks
     gunColor*: string #New color of the gun
+
+  BotListUpdate* = ref object of Message
+    bots*: seq[BotInfo] #List of bots
 
   BotReady* = ref object of Message
 
@@ -142,6 +152,13 @@ type
     y*: float #Y coordinate
     direction*: float #Direction in degrees
     color*: string #Color of the bullet
+
+  ControllerHandshake* = ref object of Message
+    sessionId*: string #Unique session id that must match the session id received from the server handshake.
+    name*: string #Name of the controller
+    version*: string #Version of the controller
+    author*: string #Author of the controller
+    secret*: string #Secret used for access control with the server
 
   GameSetup* = ref object of RootObj
     gameType*: string #Type of game

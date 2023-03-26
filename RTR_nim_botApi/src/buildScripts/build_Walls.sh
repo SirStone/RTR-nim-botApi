@@ -1,10 +1,13 @@
-# nim c --threads:on --outdir:RTR_nim_botApi/out/NewBot RTR_nim_botApi/src/SampleBots/Walls/Walls.nim # for debugging
-nim c --threads:on -d:release --outdir:RTR_nim_botApi/out/SampleBots/Walls RTR_nim_botApi/src/SampleBots/Walls/Walls.nim #for release
+SRC_DIR="src/RTR_nim_botApi/SampleBots/Walls"
+OUT_DIR="out/SampleBots/Walls"
+
+# nim c --threads:on  --gc:orc --outdir:$OUT_DIR $SRC_DIR/Walls.nim # for debugging
+nim c --threads:on --gc:orc -d:release --outdir:$OUT_DIR $SRC_DIR/Walls.nim #for release
 
 # GOING FORWARD ONLY IF COMPILE IS OK
 if [ $? -eq 0 ]; then
-    cp RTR_nim_botApi/src/SampleBots/Walls/Walls.json RTR_nim_botApi/out/SampleBots/Walls
-    cp RTR_nim_botApi/src/SampleBots/Walls/Walls.sh RTR_nim_botApi/out/SampleBots/Walls
+    cp $SRC_DIR/Walls.json $OUT_DIR
+    cp $SRC_DIR/Walls.sh $OUT_DIR
 
-    bash RTR_nim_botApi/out/SampleBots/Walls/Walls.sh -u "127.0.0.1:7338" -s botssecret
+    # bash $OUT_DIR/Walls.sh -u "127.0.0.1:1536" -s botssecret
 fi

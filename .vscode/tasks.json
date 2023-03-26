@@ -41,7 +41,7 @@
             "type": "shell",
             "command": "nimble",
             "args": [
-                "test","--threads:on","--gc:orc"
+                "test","--threads:on","--gc:orc","--verbose"
             ],
             "problemMatcher": [],
             "group": {

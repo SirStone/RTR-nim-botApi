@@ -1,2 +1,5 @@
 out
 .DS_Store
+RTR_nim_botApi/tests/test_runningBot
+RTR_nim_botApi/assets/*
+!RTR_nim_botApi/assets/README.md
