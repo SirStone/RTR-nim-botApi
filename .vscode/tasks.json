@@ -11,19 +11,6 @@
     },
     "tasks": [
         {
-            "label": "build NewBot",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                "src/buildScripts/build_NewBot.sh"
-            ],
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
-        },
-        {
             "label": "build Walls",
             "type": "shell",
             "command": "bash",
@@ -37,11 +24,11 @@
             }
         },
         {
-            "label": "test all",
+            "label": "start tests",
             "type": "shell",
-            "command": "nimble",
+            "command": "bash",
             "args": [
-                "test","--threads:on","--gc:orc","--verbose"
+                "tests/buildAndTest.sh"
             ],
             "problemMatcher": [],
             "group": {

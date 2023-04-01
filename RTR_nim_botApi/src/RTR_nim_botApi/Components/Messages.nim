@@ -4,11 +4,11 @@ import json
 type
   Type* = enum
     botHandshake = "BotHandshake"
-    serverHandshake = "ServerHandshake"
-    botReady = "BotReady"
     botIntent = "BotIntent"
+    botReady = "BotReady"
     gameStartedEventForBot = "GameStartedEventForBot"
     gameEndedEventForBot = "GameEndedEventForBot"
+    gameEndedEventForObserver = "GameEndedEventForObserver"
     gameAbortedEvent = "GameAbortedEvent"
     roundStartedEvent = "RoundStartedEvent"
     roundEndedEvent = "RoundEndedEvent"
@@ -17,16 +17,21 @@ type
     botHitBotEvent = "BotHitBotEvent"
     botHitWallEvent = "BotHitWallEvent"
     botInfo = "BotInfo"
-    botListupdate = "BotListUpdate"
+    botListUpdate = "BotListUpdate"
     bulletFiredEvent = "BulletFiredEvent"
     bulletHitBotEvent = "BulletHitBotEvent"
     bulletHitBulletEvent = "BulletHitBulletEvent"
     controllerHandshake = "ControllerHandshake"
     bulletHitWallEvent = "BulletHitWallEvent"
     hitByBulletEvent = "HitByBulletEvent"
+    gameStartedEventForObserver = "GameStartedEventForObserver"
+    roundEndedEventForObserver = "RoundEndedEventForObserver"
     scannedBotEvent = "ScannedBotEvent"
+    serverHandshake = "ServerHandshake"
     skippedTurnEvent = "SkippedTurnEvent"
+    startGame = "StartGame"
     tickEventForBot = "TickEventForBot"
+    tickEventForObserver = "TickEventForObserver"
     wonRoundEvent = "WonRoundEvent"
   
   Message* = ref object of RootObj
@@ -37,6 +42,10 @@ type
 
   Event* = ref object of Message
     turnNumber*: int #The turn number in current round when event occurred
+
+  BotAddress* = ref object of RootObj
+    host*: string #Host name or IP address
+    port*: int #Port number
 
   BotDeathEvent* = ref object of Event
     victimId*: int #ID of the bot that has died
@@ -107,6 +116,11 @@ type
     secondPlaces*: int #Number of 2nd places
     thirdPlaces*: int #Number of 3rd places
 
+  BotResultsForObserver* = ref object of BotResultsForBot
+    id*: int #ID of the bot
+    name*: string #Name of the bot
+    version*: string #Version of the bot
+
   BotState* = ref object of RootObj
     energy*: float #Energy level
     x*: float #X coordinate
@@ -127,7 +141,13 @@ type
     scanColor*: string #Current color of the scan arc
     tracksColor*: string #Current color of the tracks
     gunColor*: string #Current color of the gun
-  
+
+  BotStateWithId* = ref object of BotState
+    id*: int #Unique display id of bot in the battle (like an index)
+    sessionId*: string #Unique session id used for identifying the bot
+    stdOut*: string #Last data received for standard out (stdout)
+    stdErr*: string #Last data received for standard error (stderr)
+
   BulletFiredEvent* = ref object of Event
     bullet*: BulletState #Bullet that was fired
 
@@ -182,11 +202,19 @@ type
     isReadyTimeoutLocked*: bool #Flag specifying if the ready timeout is fixed for this game type
     defaultTurnsPerSecond*: int #Default number of turns to show per second for an observer/UI
 
+  GameStartedEventForObserver* = ref object of Message
+    gameSetup*: GameSetup #Game setup
+    participants:seq[Participant]
+
   GameAbortedEvent* = ref object of Message
 
   GameEndedEventForBot* = ref object of Message
     numberOfRounds*: int #Number of rounds played
-    results*: BotResultsForBot #Bot results of the battle
+    results*: BotResultsForObserver #Results of the battle for all bots
+
+  GameEndedEventForObserver* = ref object of Message
+    numberOfRounds*: int #Number of rounds played
+    results*: seq[BotResultsForObserver] #Results of the battle for all bots
 
   GameStartedEventForBot* = ref object of Message
     myId*: int #My ID is an unique identifier for this bot
@@ -197,6 +225,20 @@ type
     damage*: float #Damage inflicted by the bullet
     energy*: float #Remaining energy level of the bot after the damage was inflicted
 
+  Participant* = ref object of RootObj
+    id*: int #Identifier for the participant in a battle
+    sessionId*: string #Unique session id that must match the session id received from the server handshake
+    name*: string #Name of bot, e.g. Killer Bee
+    version*: string #Version of bot, e.g. 1.0
+    authors*: seq[string] #Authors of bot, e.g. John Doe
+    description*: string #Short description of the bot, preferable a one-liner
+    homepage*: string #URL to homepage of bot
+    countryCodes*: seq[string] #2-letter country code(s) defined by ISO 3166-1, e.g.  "GB"
+    gameTypes*: seq[string] #Game types supported by this bot (defined elsewhere), e.g. "classic", "melee" and "1v1"
+    platform*: string #Platform used for running the bot, e.g. JVM 17 or .NET 5
+    programmingLang*: string #Programming language the bot is written in, e.g. "Java", "C#" or "C++"
+    initialPosition*: InitialPosition #Initial position of the bot
+
   RoundStartedEvent* = ref object of Message
     roundNumber*: int #The current round number in the battle when event occurred
 
@@ -204,6 +246,11 @@ type
     roundNumber*: int #The current round number in the battle when event occurred
     turnNumber*: int #The current turn number in the round when event occurred
     results*: BotResultsForBot #The accumulated bot results by the end of the round.
+
+  RoundEndedEventForObserver* = ref object of Message
+    roundNumber*: int #The current round number in the battle when event occurred
+    turnNumber*: int #The current turn number in the round when event occurred
+    results*: BotResultsForObserver #The accumulated bot results by the end of the round.
 
   ScannedBotEvent* = ref object of Event
     scannedByBotId*: int #ID of the bot did the scanning
@@ -221,6 +268,10 @@ type
     version*: string #Game version, e.g. '1.0.0' using Semantic Versioning (https://semver.org/)
     gameTypes*: seq[string] #Game types running at this server, e.g. "melee" and "1v1"
 
+  StartGame* = ref object of Message
+    gameSetup*: GameSetup #Game setup
+    botAddresses*: seq[BotAddress] #List of bot addresses
+
   SkippedTurnEvent* = ref object of Event
 
   TickEventForBot* = ref object of Event
@@ -229,5 +280,11 @@ type
     botState*: BotState #Current state of this bot
     bulletStates*: seq[BulletState] #Current state of the bullets fired by this bot
     events*: JsonNode #Events occurring in the turn relevant for this bot
+
+  TickEventForObserver* = ref object of Event
+    roundNumber*: int #The current round number in the battle when event occurred
+    botStates*: seq[BotStateWithId] #Current state of all bots
+    bulletStates*: seq[BulletState] #Current state of all bullets
+    events*: seq[Event] #All events occurring at this tick
 
   WonRoundEvent* = ref object of Event

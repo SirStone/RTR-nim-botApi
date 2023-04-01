@@ -18,10 +18,13 @@ while getopts 'u:s:' flag; do
   esac
 done
 
-echo $SERVER_URL
-echo $SERVER_SECRET
+echo "SERVER_URL:$SERVER_URL"
+echo "SERVER SECRET:$SERVER_SECRET"
+
 
 # Remove the extension from the file name
 bot_name=${script_name%.*}
 
+pwd
+echo $script_dir/$bot_name
 $script_dir/$bot_name
