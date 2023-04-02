@@ -1,6 +1,6 @@
 # standard libraries
 import std/[random, osproc, os, sugar, threadpool, streams, strutils, strtabs]
-import asyncdispatch, ws, jsony
+import asyncdispatch, ws, jsony, asynchttpserver
 
 # unit test library
 import unittest
@@ -16,6 +16,7 @@ var bot:NewBot
 var serverProcess, booterProcess, botProcess:Process
 var botProcesses:seq[Process]
 var botSecret, controllerSecret, port, connectionUrl: string
+var gameSetup:GameSetup
 
 proc rndStr: string =
   for _ in 0..10:
@@ -31,7 +32,7 @@ proc runTankRoyaleServer() =
   echo "running server"
   try:
     let serverArgs = ["-jar", "robocode-tankroyale-server-0.19.1.jar", "--botSecrets", botSecret, "--controllerSecrets", controllerSecret, "--port", port]
-    serverProcess = startProcess(command="java", workingDir="assets", args=serverArgs, options={poStdErrToStdOut, poParentStreams, poUsePath})
+    serverProcess = startProcess(command="java", workingDir="assets", args=serverArgs, options={poStdErrToStdOut, poUsePath})
     
     # wait for the booter to start
     sleep(2000)
@@ -48,12 +49,32 @@ proc runBots(botsToRun:seq[BotToRun]) =
   for i,bot in botsToRun:
     botProcesses[i] = startProcess(command="bash "&bot.name&".sh", workingDir=joinPath(bot.path,bot.name), options={poStdErrToStdOut, poParentStreams, poUsePath, poEvalCommand}, env=newStringTable({"SERVER_URL":connectionUrl,"SERVER_SECRET":botSecret}) )
 
+var number_of_skipped_turns = 0
+proc cb(req: Request) {.async, gcsafe.} =
+  try:
+    var ws = await newWebSocket(req)
+    await ws.send("Welcome to simple chat server")
+    while ws.readyState == Open:
+      let packet = await ws.receiveStrPacket()
+      if packet == "skipped":
+        number_of_skipped_turns = number_of_skipped_turns + 1
+  except WebSocketClosedError:
+    echo "Socket closed. "
+  except WebSocketProtocolMismatchError:
+    echo "Socket tried to use an unknown protocol: ", getCurrentExceptionMsg()
+  except WebSocketError:
+    echo "Unexpected socket error: ", getCurrentExceptionMsg()
+
+proc runChatServer() = 
+  var server = newAsyncHttpServer()
+  asyncCheck server.serve(Port(9001), cb)
+
 var json_message_for_controller = ""
 proc joinAsController(numberOfBots:int) {.async.} =
   try: # connects to the server with a websocket
     let controller_ws = await newWebSocket(connectionUrl)
 
-     # while the connection is open...
+    # while the connection is open...
     while(controller_ws.readyState == Open):
       # listen for a message
       json_message_for_controller = await controller_ws.receiveStrPacket()
@@ -78,15 +99,15 @@ proc joinAsController(numberOfBots:int) {.async.} =
             let botAddress = BotAddress(host:bot.host, port:bot.port)
             botAddresses.add(botAddress)
 
-          let gameSetup = readFile(joinPath(getAppDir(),"gameSetup.json")).fromJson(GameSetup)
           let start_game = StartGame(`type`:Type.startGame, botAddresses:botAddresses, gameSetup:gameSetup)
           await controller_ws.send(start_game.toJson)
       of gameEndedEventForObserver:
-        quit(0)
+        controller_ws.close()
       of gameStartedEventForObserver:
         continue
       of roundEndedEventForObserver:
-        continue
+        let round_ended_event_for_observer = json_message_for_controller.fromJson(RoundEndedEventForObserver)
+        echo "skipped turns up to round ",round_ended_event_for_observer.roundNumber,": ",number_of_skipped_turns
       of roundStartedEvent:
         continue
       of tickEventForObserver:
@@ -113,8 +134,6 @@ suite "Creating a bot":
     check bot is Bot
 
 suite "Running a full game":
-  enableDebug()
-
   setup: # run before each test
     echo "SETUP PHASE"
     echo "generating new secrets"
@@ -142,5 +161,13 @@ suite "Running a full game":
       ]
     runBots(botsToRun)
 
+    # run a Websocket server for the TestBot
+    runChatServer()
+
+    gameSetup = readFile(joinPath(getAppDir(),"gameSetup.json")).fromJson(GameSetup)
+
     # join as controller
     waitFor joinAsController(botsToRun.len)
+
+    # cheks about the run
+    check number_of_skipped_turns < 2 * gameSetup.numberOfRounds
