@@ -1,6 +1,4 @@
 # import component
-import Messages
-
 type
   Bot* = ref object of RootObj
     # filled from JSON

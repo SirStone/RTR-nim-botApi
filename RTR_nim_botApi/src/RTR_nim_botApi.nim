@@ -1,5 +1,5 @@
 # standard libraries
-import std/[os, strutils, sugar, threadpool]
+import std/[os, strutils, threadpool]
 
 # 3rd party libraries
 import asyncdispatch, ws, jsony, json
@@ -9,7 +9,6 @@ import RTR_nim_botApi/Components/[Bot, Messages]
 export Bot, Messages
 
 # system variables
-var debug_is_enabled = false
 var runningState*:bool
 var firstTickSeen:bool = false
 var lastTurnWeSentIntent:int = -1
@@ -98,28 +97,21 @@ proc turnRight*(degrees:float) =
 
 proc forward*(degrees:float) = discard #TODO
 
-# system procs
-proc debug(msg:string) =
-  if(debug_is_enabled): echo(msg)
-
-proc enableDebug*() = 
-  debug_is_enabled = true
-  debug("Debug messages enabled")
-
+# this function is not 'physically' sending the intent, bit just setting the 'sendIntent' flag to true if is the right moment to do so
 proc go*() =
   if lastTurnWeSentIntent < turnNumber:
-    lastTurnWeSentIntent = turnNumber
     sendIntent = true
+  sleep(1)
 
-proc echoAddress*[T](x:T) =
-  echo cast[uint](x.unsafeAddr).toHex
-
+# this loop is responsible for sending the intent to the server, it works untl the bot is a running state and if the sendIntend flag is true
 proc sendIntentLoop() {.async.} =
   while(runningState):
     if sendIntent:
       sendIntent = false
       let intent = BotIntent(`type`: Type.botIntent, turnRate:intent_turnRate, gunTurnRate:intent_gunTurnRate, radarTurnRate:intent_radarTurnRate, targetSpeed:intent_targetSpeed, firePower:intent_firePower, adjustGunForBodyTurn:intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:intent_adjustRadarForGunTurn, rescan:intent_rescan, fireAssist:intent_fireAssist, bodyColor:intent_bodyColor, turretColor:intent_turretColor, radarColor:intent_radarColor, bulletColor:intent_bulletColor, scanColor:intent_scanColor, tracksColor:intent_tracksColor, gunColor:intent_gunColor)
       await gs_ws.send(intent.toJson)
+
+      lastTurnWeSentIntent = turnNumber
 
       #reset the intent variables
       intent_turnRate = 0
@@ -129,16 +121,19 @@ proc sendIntentLoop() {.async.} =
       intent_firePower = 0
             
     else:
-      await sleepAsync(10)
-  debug("sendIntentLoop stopped")
+      await sleepAsync(1)
 
+# very delicate process, don't touch unless you know what you are doing
+# we don't knwow if this will be a blocking call or not, so we need to run it in a separate thread
 proc runAsync(bot:Bot) {.thread.} =
+  # first run the bot 'run()' method, the one scripted by the bot creator
+  # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
+  echo "running run()"
   bot.run()
-
-  echo "bot.run() finished, starting Api go loop"
-  while isRunning():
+  echo "run() closed, now running go by default"
+  # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
+  while runningState:
     go()
-  echo "api go loop stopped"
 
 proc stopBot() = 
   runningState = false
@@ -153,11 +148,9 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
   # 'case' switch over type
   case `type`:
   of serverHandshake:
-    debug("ServerHandshake received")
     let server_handshake = json_message.fromJson(ServerHandshake)
     let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret)
     await gs_ws.send(bot_handshake.toJson)
-    debug("ServerHandshake sent whit this secret:" & bot.secret)
   
   of gameStartedEventForBot:
     # in case the bot is still running from a previuos game we stop it
@@ -294,11 +287,9 @@ proc talkWithGS(bot:Bot, url:string) {.async.} =
       asyncCheck handleMessage(bot, json_message, gs_ws)
 
   except Exception:
-    debug("Exception: " & getCurrentExceptionMsg())
     bot.onConnectionError(getCurrentExceptionMsg())
 
 proc newBot*(bot:Bot, json_file:string) =
-  debug("Building BOT from JSON file")
   let bot2 = readFile(joinPath(getAppDir(),json_file)).fromJson(bot.type)
   bot.name = bot2.name
   bot.version = bot2.version
@@ -315,8 +306,6 @@ proc newBot*(bot:Bot, json_file:string) =
 
 proc start*(bot:Bot, connect:bool = true) =
 
-  debug("connect is " & $connect)
-  
   # connect to the Game Server
   if(connect):
     if bot.secret == "":
@@ -325,9 +314,4 @@ proc start*(bot:Bot, connect:bool = true) =
     if bot.serverConnectionURL == "":
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
 
-
-    # for custom values, first parameter is address, second is the port
-  
-    debug("Connetting to " & bot.serverConnectionURL)
-    
     waitFor talkWithGS(bot, bot.serverConnectionURL)

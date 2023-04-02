@@ -202,10 +202,6 @@ type
     isReadyTimeoutLocked*: bool #Flag specifying if the ready timeout is fixed for this game type
     defaultTurnsPerSecond*: int #Default number of turns to show per second for an observer/UI
 
-  GameStartedEventForObserver* = ref object of Message
-    gameSetup*: GameSetup #Game setup
-    participants:seq[Participant]
-
   GameAbortedEvent* = ref object of Message
 
   GameEndedEventForBot* = ref object of Message
@@ -219,6 +215,10 @@ type
   GameStartedEventForBot* = ref object of Message
     myId*: int #My ID is an unique identifier for this bot
     gameSetup*: GameSetup #Game setup
+
+  GameStartedEventForObserver* = ref object of Message
+    gameSetup*: GameSetup #Game setup
+    participants*:seq[Participant]
 
   HitByBulletEvent* = ref object of Event
     bullet*: BulletState #Bullet that has hit the bot
@@ -250,7 +250,7 @@ type
   RoundEndedEventForObserver* = ref object of Message
     roundNumber*: int #The current round number in the battle when event occurred
     turnNumber*: int #The current turn number in the round when event occurred
-    results*: BotResultsForObserver #The accumulated bot results by the end of the round.
+    results*: seq[BotResultsForObserver] #The accumulated bot results by the end of the round.
 
   ScannedBotEvent* = ref object of Event
     scannedByBotId*: int #ID of the bot did the scanning
