@@ -1,6 +1,0 @@
-{
-    "nim.project": [
-        "src/RTR_nim_botApi.nim"
-    ],
-    "nim.projectMapping": {}
-}

@@ -24,6 +24,19 @@
             }
         },
         {
+            "label": "build TestBot",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "src/buildScripts/build_TestBot.sh"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
             "label": "start tests",
             "type": "shell",
             "command": "bash",

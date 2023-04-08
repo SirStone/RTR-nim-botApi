@@ -18,15 +18,16 @@ test_bot.newBot("TestBot.json")
 test_bot.start()
 
 # DEBUG VARIABLES
-method run(bot:TestBot) =
-  var i = 0
-  while(isRunning() and i < 10000):
-    i = i + 1
-    go()
+# method run(bot:TestBot) =
+#   echo "[TestBot]run"
+  # var i = 0
+  # while(isRunning() and i < 10000):
+  #   i = i + 1
+  #   go()
 
 method onSkippedTurn(bot:TestBot, skipped_turn_event:SkippedTurnEvent) =
   asyncCheck websocketServer.send("skipped")
-  if(false):
+  if(true):
     echo "[TestBot]SKIPPED TURN NUMBER!! ",skipped_turn_event.turnNumber
 
 method onGameStarted(bot:TestBot, game_started_event_for_bot:GameStartedEventForBot) =

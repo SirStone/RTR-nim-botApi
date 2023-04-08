@@ -1,5 +1,5 @@
 # standard libraries
-import std/[random, osproc, os, sugar, threadpool, streams, strutils, strtabs]
+import std/[random, osproc, os, sugar, strutils, strtabs]
 import asyncdispatch, ws, jsony, asynchttpserver
 
 # unit test library
@@ -13,25 +13,20 @@ type
     NewBot = ref object of Bot
 
 var bot:NewBot
-var serverProcess, booterProcess, botProcess:Process
+var serverProcess:Process
 var botProcesses:seq[Process]
 var botSecret, controllerSecret, port, connectionUrl: string
 var gameSetup:GameSetup
+let assets_version = "0.19.2"
 
 proc rndStr: string =
   for _ in 0..10:
     add(result, char(rand(int('a') .. int('z'))))
 
-proc tankRoyaleServerMessages(server_outputStream:Stream) {.async.} =
-  var line = ""
-  while server_outputStream.readLine(line):
-    echo "SERVER: " & line
-    await sleepAsync(1)
-
 proc runTankRoyaleServer() =
   echo "running server"
   try:
-    let serverArgs = ["-jar", "robocode-tankroyale-server-0.19.1.jar", "--botSecrets", botSecret, "--controllerSecrets", controllerSecret, "--port", port]
+    let serverArgs = ["-jar", "robocode-tankroyale-server-"&assets_version&".jar", "--botSecrets", botSecret, "--controllerSecrets", controllerSecret, "--port", port]
     serverProcess = startProcess(command="java", workingDir="assets", args=serverArgs, options={poStdErrToStdOut, poUsePath})
     
     # wait for the booter to start
@@ -140,7 +135,7 @@ suite "Running a full game":
     randomize()
     botSecret = rndStr()
     controllerSecret = rndStr()
-    port = $rand(10000 .. 32767)
+    port = $rand(10000 .. 65535)
     connectionUrl = "ws://localhost:" & port
     
   teardown: # run after each test
@@ -153,9 +148,9 @@ suite "Running a full game":
 
     # run bots with booter
     let botsToRun = @[
-      # BotToRun(name:"Walls", path:"assets/sample-bots-java-0.19.1"),
-      # BotToRun(name:"Crazy", path:"assets/sample-bots-java-0.19.1"),
-      BotToRun(name:"RamFire", path:"assets/sample-bots-java-0.19.1"),
+      # BotToRun(name:"Walls", path:"assets/sample-bots-java-"&assets_version),
+      # BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version),
+      BotToRun(name:"RamFire", path:"assets/sample-bots-java-"&assets_version),
       BotToRun(name:"TestBot", path:"out/tests"),
       # BotToRun(name:"Walls", path:"out/SampleBots")
       ]

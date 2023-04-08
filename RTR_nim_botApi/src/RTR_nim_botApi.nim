@@ -99,14 +99,13 @@ proc forward*(degrees:float) = discard #TODO
 
 # this function is not 'physically' sending the intent, bit just setting the 'sendIntent' flag to true if is the right moment to do so
 proc go*() =
-  if lastTurnWeSentIntent < turnNumber:
-    sendIntent = true
+  sendIntent = true
   sleep(1)
 
 # this loop is responsible for sending the intent to the server, it works untl the bot is a running state and if the sendIntend flag is true
 proc sendIntentLoop() {.async.} =
-  while(runningState):
-    if sendIntent:
+  while(true):
+    if sendIntent and lastTurnWeSentIntent < turnNumber: 
       sendIntent = false
       let intent = BotIntent(`type`: Type.botIntent, turnRate:intent_turnRate, gunTurnRate:intent_gunTurnRate, radarTurnRate:intent_radarTurnRate, targetSpeed:intent_targetSpeed, firePower:intent_firePower, adjustGunForBodyTurn:intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:intent_adjustRadarForGunTurn, rescan:intent_rescan, fireAssist:intent_fireAssist, bodyColor:intent_bodyColor, turretColor:intent_turretColor, radarColor:intent_radarColor, bulletColor:intent_bulletColor, scanColor:intent_scanColor, tracksColor:intent_tracksColor, gunColor:intent_gunColor)
       await gs_ws.send(intent.toJson)
@@ -120,17 +119,16 @@ proc sendIntentLoop() {.async.} =
       intent_targetSpeed = 0
       intent_firePower = 0
             
-    else:
-      await sleepAsync(1)
+    # else:
+    await sleepAsync(1)
 
 # very delicate process, don't touch unless you know what you are doing
 # we don't knwow if this will be a blocking call or not, so we need to run it in a separate thread
 proc runAsync(bot:Bot) {.thread.} =
   # first run the bot 'run()' method, the one scripted by the bot creator
   # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
-  echo "running run()"
   bot.run()
-  echo "run() closed, now running go by default"
+
   # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
   while runningState:
     go()
@@ -139,6 +137,7 @@ proc stopBot() =
   runningState = false
   firstTickSeen = false
   lastTurnWeSentIntent = -1
+  echo "sendIntent: ", sendIntent
   sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
 
 proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
@@ -201,7 +200,6 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
     if(not firstTickSeen):
       runningState = true
       spawn runAsync(bot)
-      asyncCheck sendIntentLoop()
       firstTickSeen = true
 
     # activating the bot method
@@ -313,5 +311,7 @@ proc start*(bot:Bot, connect:bool = true) =
 
     if bot.serverConnectionURL == "":
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
+
+    asyncCheck sendIntentLoop()
 
     waitFor talkWithGS(bot, bot.serverConnectionURL)
