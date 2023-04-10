@@ -24,10 +24,30 @@ var myId: int
 var turnNumber*,roundNumber:int
 var energy,x,y,direction,gunDirection,radarDirection,radarSweep,speed,turnRate,gunTurnRate,radarTurnRate,gunHeat:float
 
+# game physics
+let maxSpeed:float = 8
+let maxTurnRate:float = 10
+let maxGunTurnRate:float = 20
+let maxRadarTurnRate:float = 45
+let maxFirePower:float = 3
+let minFirePower:float = 0.1
+
 # intent
 var intent_turnRate,intent_gunTurnRate,intent_radarTurnRate,intent_targetSpeed,intent_firepower:float
 var intent_adjustGunForBodyTurn,intent_adjustRadarForGunTurn,intent_adjustRadarForBodyTurn,intent_rescan,intent_fireAssist:bool
 var intent_bodyColor,intent_turretColor,intent_radarColor,intent_bulletColor,intent_scanColor,intent_tracksColor,intent_gunColor:string
+
+# remainings
+var remaining_turnRate:float = 0
+
+proc updateRemainings() =
+  if remaining_turnRate != 0:
+    if remaining_turnRate > 0:
+      intent_turnRate = min(remaining_turnRate, maxTurnRate)
+      remaining_turnRate = max(0, remaining_turnRate - maxTurnRate)
+    else:
+      intent_turnRate = max(remaining_turnRate, -maxTurnRate)
+      remaining_turnRate = min(0, remaining_turnRate + maxTurnRate)
 
 # the following section contains all the methods that are supposed to be overrided by the bot creator
 method run(bot:Bot) {.base.} = discard
@@ -45,6 +65,46 @@ method onTick(bot:Bot, tickEventForBot:TickEventForBot) {.base.} = discard
 method onDeath(bot:Bot, botDeathEvent:BotDeathEvent) {.base.} =  discard
 method onConnected(bot:Bot, url:string) {.base.} = discard
 method onConnectionError(bot:Bot, error:string) {.base.} = discard
+
+# this function is not 'physically' sending the intent, bit just setting the 'sendIntent' flag to true if is the right moment to do so
+proc go*() =
+  sendIntent = true
+  while sendIntent and runningState:
+    sleep(1)
+
+# this loop is responsible for sending the intent to the server, it works untl the bot is a running state and if the sendIntend flag is true
+proc sendIntentLoop() {.async.} =
+  while(true):
+    if sendIntent and lastTurnWeSentIntent < turnNumber:
+      updateRemainings()
+
+      let intent = BotIntent(`type`: Type.botIntent, turnRate:intent_turnRate, gunTurnRate:intent_gunTurnRate, radarTurnRate:intent_radarTurnRate, targetSpeed:intent_targetSpeed, firePower:intent_firePower, adjustGunForBodyTurn:intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:intent_adjustRadarForGunTurn, rescan:intent_rescan, fireAssist:intent_fireAssist, bodyColor:intent_bodyColor, turretColor:intent_turretColor, radarColor:intent_radarColor, bulletColor:intent_bulletColor, scanColor:intent_scanColor, tracksColor:intent_tracksColor, gunColor:intent_gunColor)
+      await gs_ws.send(intent.toJson)
+
+      lastTurnWeSentIntent = turnNumber
+
+      #reset the intent variables
+      intent_turnRate = 0
+      intent_gunTurnRate = 0
+      intent_radarTurnRate = 0
+      intent_targetSpeed = 0
+      intent_firePower = 0
+
+      sendIntent = false
+            
+    else:
+      await sleepAsync(1)
+
+# very delicate process, don't touch unless you know what you are doing
+# we don't knwow if this will be a blocking call or not, so we need to run it in a separate thread
+proc runAsync(bot:Bot) {.thread.} =
+  # first run the bot 'run()' method, the one scripted by the bot creator
+  # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
+  bot.run()
+
+  # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
+  while runningState:
+    go()
 
 proc setSecret*(bot:Bot, s:string) =
   bot.secret = s
@@ -65,19 +125,19 @@ proc setAdjustRadarForGunTurn*(adjust:bool) =
 proc setAdjustRadarForBodyTurn*(adjust:bool) =
   intent_adjustRadarForBodyTurn = adjust
 
-proc setBodyColor*(color:string) = 
+proc setBodyColor*(color:string) =
   intent_bodyColor = $color
 
-proc setTurretColor*(color:string) = 
+proc setTurretColor*(color:string) =
   intent_turretColor = $color
 
-proc setRadarColor*(color:string) = 
+proc setRadarColor*(color:string) =
   intent_radarColor = $color
 
-proc setBulletColor*(color:string) = 
+proc setBulletColor*(color:string) =
   intent_bulletColor = $color
 
-proc setScanColor*(color:string) = 
+proc setScanColor*(color:string) =
   intent_scanColor = $color
 
 proc getArenaWidth*():int =
@@ -92,53 +152,32 @@ proc getDirection*():float =
 proc getTurnNumber*():int =
   return turnNumber
 
-proc turnRight*(degrees:float) = 
-  intent_turnRate = degrees
+proc setTurnLeft*(degrees:float) =
+  remaining_turnRate = degrees
+
+proc turnLeft*(degrees:float) =
+  echo "[API] turnLeft [", degrees, "]"
+  # ask to turn left for all degrees, the server will take care of turning the bot the max amount of degrees allowed
+  setTurnLeft(degrees)
+  
+  # send intent, no other actions must be done until the action is completed
+  while runningState and remaining_turnRate != 0: go()
+    
+proc setTurnRight*(degrees:float) =
+  setTurnLeft(-degrees)
+
+proc turnRight*(degrees:float) =
+  turnLeft(-degrees)
 
 proc forward*(degrees:float) = discard #TODO
 
-# this function is not 'physically' sending the intent, bit just setting the 'sendIntent' flag to true if is the right moment to do so
-proc go*() =
-  sendIntent = true
-  sleep(1)
-
-# this loop is responsible for sending the intent to the server, it works untl the bot is a running state and if the sendIntend flag is true
-proc sendIntentLoop() {.async.} =
-  while(true):
-    if sendIntent and lastTurnWeSentIntent < turnNumber: 
-      sendIntent = false
-      let intent = BotIntent(`type`: Type.botIntent, turnRate:intent_turnRate, gunTurnRate:intent_gunTurnRate, radarTurnRate:intent_radarTurnRate, targetSpeed:intent_targetSpeed, firePower:intent_firePower, adjustGunForBodyTurn:intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:intent_adjustRadarForGunTurn, rescan:intent_rescan, fireAssist:intent_fireAssist, bodyColor:intent_bodyColor, turretColor:intent_turretColor, radarColor:intent_radarColor, bulletColor:intent_bulletColor, scanColor:intent_scanColor, tracksColor:intent_tracksColor, gunColor:intent_gunColor)
-      await gs_ws.send(intent.toJson)
-
-      lastTurnWeSentIntent = turnNumber
-
-      #reset the intent variables
-      intent_turnRate = 0
-      intent_gunTurnRate = 0
-      intent_radarTurnRate = 0
-      intent_targetSpeed = 0
-      intent_firePower = 0
-            
-    # else:
-    await sleepAsync(1)
-
-# very delicate process, don't touch unless you know what you are doing
-# we don't knwow if this will be a blocking call or not, so we need to run it in a separate thread
-proc runAsync(bot:Bot) {.thread.} =
-  # first run the bot 'run()' method, the one scripted by the bot creator
-  # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
-  bot.run()
-
-  # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
-  while runningState:
-    go()
-
 proc stopBot() = 
+  echo "[API] Stopping bot"
   runningState = false
   firstTickSeen = false
   lastTurnWeSentIntent = -1
-  echo "sendIntent: ", sendIntent
   sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
+  echo "[API] Bot stopped"
 
 proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
   # get the type of the message from the message itself
@@ -309,7 +348,7 @@ proc start*(bot:Bot, connect:bool = true) =
     if bot.secret == "":
       bot.secret = getEnv("SERVER_SECRET", "serversecret")
 
-    if bot.serverConnectionURL == "":
+    if bot.serverConnectionURL == "": 
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
 
     asyncCheck sendIntentLoop()

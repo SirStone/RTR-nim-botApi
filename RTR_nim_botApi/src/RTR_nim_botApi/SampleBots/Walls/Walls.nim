@@ -16,6 +16,7 @@ var moveAmount:float # How much to move
 
 # Called when a new round is started -> initialize and do some movement
 method run(bot:Walls) =
+  echo "run"
   # set colors
   setBodyColor("#000000")
   setTurretColor("#000000")

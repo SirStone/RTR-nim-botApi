@@ -1,5 +1,5 @@
 # standard libraries
-import std/[random, osproc, os, sugar, strutils, strtabs]
+import std/[random, osproc, os, sugar, strutils, strtabs, math]
 import asyncdispatch, ws, jsony, asynchttpserver
 
 # unit test library
@@ -18,6 +18,7 @@ var botProcesses:seq[Process]
 var botSecret, controllerSecret, port, connectionUrl: string
 var gameSetup:GameSetup
 let assets_version = "0.19.2"
+var botId = 0
 
 proc rndStr: string =
   for _ in 0..10:
@@ -51,7 +52,8 @@ proc cb(req: Request) {.async, gcsafe.} =
     await ws.send("Welcome to simple chat server")
     while ws.readyState == Open:
       let packet = await ws.receiveStrPacket()
-      if packet == "skipped":
+      case packet:
+      of "skipped":
         number_of_skipped_turns = number_of_skipped_turns + 1
   except WebSocketClosedError:
     echo "Socket closed. "
@@ -63,6 +65,9 @@ proc cb(req: Request) {.async, gcsafe.} =
 proc runChatServer() = 
   var server = newAsyncHttpServer()
   asyncCheck server.serve(Port(9001), cb)
+
+var turnRightTest_start:float = 0
+var turnRightTest_end:float = 0
 
 var json_message_for_controller = ""
 proc joinAsController(numberOfBots:int) {.async.} =
@@ -99,14 +104,34 @@ proc joinAsController(numberOfBots:int) {.async.} =
       of gameEndedEventForObserver:
         controller_ws.close()
       of gameStartedEventForObserver:
-        continue
+        let game_Started_event_for_observer = json_message_for_controller.fromJson(GameStartedEventForObserver)
+        for participant in game_Started_event_for_observer.participants:
+          if participant.name == "TeStBoT":
+            botId = participant.id
       of roundEndedEventForObserver:
         let round_ended_event_for_observer = json_message_for_controller.fromJson(RoundEndedEventForObserver)
         echo "skipped turns up to round ",round_ended_event_for_observer.roundNumber,": ",number_of_skipped_turns
       of roundStartedEvent:
-        continue
+        # reset some variables
+        turnRightTest_start = 0
       of tickEventForObserver:
-        continue
+        let tick_event_for_observer = json_message_for_controller.fromJson(TickEventForObserver)
+        for botState in tick_event_for_observer.botStates:
+          if botState.id == botId:
+            if turnRightTest_start == 0:
+              turnRightTest_start = botState.direction
+            else:
+              turnRightTest_end = botState.direction
+            break
+        
+        if tick_event_for_observer.turnNumber == 100:
+          echo "turnRightTest_start: ",turnRightTest_start
+          echo "turnRightTest_end: ",turnRightTest_end
+          var diff = ceil(turnRightTest_end - turnRightTest_start)
+          if diff < 0: diff = diff + 360
+          echo "diff: ",diff
+          check diff == 90
+          
       else:
         dump json_message_for_controller
 
@@ -148,9 +173,11 @@ suite "Running a full game":
 
     # run bots with booter
     let botsToRun = @[
+      BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version),
+      # BotToRun(name:"Corners", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Walls", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version),
-      BotToRun(name:"RamFire", path:"assets/sample-bots-java-"&assets_version),
+      # BotToRun(name:"RamFire", path:"assets/sample-bots-java-"&assets_version),
       BotToRun(name:"TestBot", path:"out/tests"),
       # BotToRun(name:"Walls", path:"out/SampleBots")
       ]

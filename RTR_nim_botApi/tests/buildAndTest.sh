@@ -12,5 +12,5 @@ if [ $? -eq 0 ]; then
     cp $SRC_DIR/$NAME.sh $OUT_DIR
 
     # run the tests
-    nimble test --threads:on --verbose
+    nimble test --threads:on --gc:orc --verbose
 fi
