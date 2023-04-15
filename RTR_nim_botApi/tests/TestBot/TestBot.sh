@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Get the directory and base name of the script
 script_dir=$(dirname "$0")
@@ -9,7 +9,7 @@ print_usage() {
   printf "Usage: [-u IP:PORT] [-s BOT-SECRET]"
 }
 
-while getopts 'u:s:' flag; do
+while getopts 'u:s' flag; do
   case "${flag}" in
     u) export SERVER_URL="ws://${OPTARG}" ;;
     s) export SERVER_SECRET="${OPTARG}" ;;
@@ -18,13 +18,7 @@ while getopts 'u:s:' flag; do
   esac
 done
 
-echo "SERVER_URL:$SERVER_URL"
-echo "SERVER SECRET:$SERVER_SECRET"
-
-
 # Remove the extension from the file name
 bot_name=${script_name%.*}
 
-pwd
-echo $script_dir/$bot_name
 $script_dir/$bot_name

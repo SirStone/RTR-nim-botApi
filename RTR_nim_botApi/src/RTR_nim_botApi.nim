@@ -156,7 +156,6 @@ proc setTurnLeft*(degrees:float) =
   remaining_turnRate = degrees
 
 proc turnLeft*(degrees:float) =
-  echo "[API] turnLeft [", degrees, "]"
   # ask to turn left for all degrees, the server will take care of turning the bot the max amount of degrees allowed
   setTurnLeft(degrees)
   
@@ -323,7 +322,7 @@ proc talkWithGS(bot:Bot, url:string) {.async.} =
       # send the message to an handler 
       asyncCheck handleMessage(bot, json_message, gs_ws)
 
-  except Exception:
+  except CatchableError:
     bot.onConnectionError(getCurrentExceptionMsg())
 
 proc newBot*(bot:Bot, json_file:string) =

@@ -32,8 +32,15 @@ proc runTankRoyaleServer() =
     
     # wait for the booter to start
     sleep(2000)
-  except:
+  except CatchableError:
     echo "error with the server:", getCurrentExceptionMsg()
+
+type
+  Test = object
+    action:string
+    value:float
+    turn_start:int
+    turn_end:int
 
 type
   BotToRun = object
@@ -43,7 +50,7 @@ type
 proc runBots(botsToRun:seq[BotToRun]) =
   botProcesses = newSeq[Process](botsToRun.len)
   for i,bot in botsToRun:
-    botProcesses[i] = startProcess(command="bash "&bot.name&".sh", workingDir=joinPath(bot.path,bot.name), options={poStdErrToStdOut, poParentStreams, poUsePath, poEvalCommand}, env=newStringTable({"SERVER_URL":connectionUrl,"SERVER_SECRET":botSecret}) )
+    botProcesses[i] = startProcess(command=bot.name&".sh ", workingDir=joinPath(bot.path,bot.name), options={poStdErrToStdOut, poParentStreams, poUsePath, poEvalCommand}, env=newStringTable({"SERVER_URL":connectionUrl,"SERVER_SECRET":botSecret}) )
 
 var number_of_skipped_turns = 0
 proc cb(req: Request) {.async, gcsafe.} =
@@ -66,13 +73,48 @@ proc runChatServer() =
   var server = newAsyncHttpServer()
   asyncCheck server.serve(Port(9001), cb)
 
-var turnRightTest_start:float = 0
-var turnRightTest_end:float = 0
-
+var turn_start:float = 0
+var turn_end:float = 0
 var json_message_for_controller = ""
+let actions = @["turnLeft", "turnRight"]
+var testsToDo = newSeq[Test]()
+randomize()
+var testTime = 10
+for i in 0..3:
+  let action = actions[rand(0..1)]
+  let value = rand(-360.0..360.0)
+  let turn_start_test = testTime
+  let turn_end_test = 10 + testTime + (abs(value) / 10).int
+  testsToDo.add(Test(action:action, value:value, turn_start:turn_start_test, turn_end:turn_end_test))
+  testtime = turn_end_test + 10
+
+
+
+proc actionCheck(actionType:string, turn_start:float, turn_end:float, expected_diff:float) =
+  case actionType:
+  of "turnLeft":    
+    echo "turn_start: ",turn_start
+    echo "turn_end: ",turn_end
+    var diff = turn_end - turn_start
+    if expected_diff >= 0:
+      if diff < 0: diff = diff + 360.0
+    else:
+      if diff > 0: diff = diff - 360.0
+    check round(diff,2) == round(expected_diff,2)
+  of "turnRight":
+    echo "turn_start: ",turn_start
+    echo "turn_end: ",turn_end
+    var diff = turn_start - turn_end
+    if expected_diff >= 0:
+      if diff < 0: diff = diff + 360.0
+    else:
+      if diff > 0: diff = diff - 360.0
+    check round(diff,2) == round(expected_diff,2)
+
 proc joinAsController(numberOfBots:int) {.async.} =
   try: # connects to the server with a websocket
     let controller_ws = await newWebSocket(connectionUrl)
+    var currentTestIndex = 0
 
     # while the connection is open...
     while(controller_ws.readyState == Open):
@@ -113,29 +155,33 @@ proc joinAsController(numberOfBots:int) {.async.} =
         echo "skipped turns up to round ",round_ended_event_for_observer.roundNumber,": ",number_of_skipped_turns
       of roundStartedEvent:
         # reset some variables
-        turnRightTest_start = 0
+        turn_start = 0
+        currentTestIndex = 0
       of tickEventForObserver:
         let tick_event_for_observer = json_message_for_controller.fromJson(TickEventForObserver)
         for botState in tick_event_for_observer.botStates:
           if botState.id == botId:
-            if turnRightTest_start == 0:
-              turnRightTest_start = botState.direction
+            if turn_start == 0:
+              turn_start = botState.direction
             else:
-              turnRightTest_end = botState.direction
+              turn_end = botState.direction
             break
         
-        if tick_event_for_observer.turnNumber == 100:
-          echo "turnRightTest_start: ",turnRightTest_start
-          echo "turnRightTest_end: ",turnRightTest_end
-          var diff = ceil(turnRightTest_end - turnRightTest_start)
-          if diff < 0: diff = diff + 360
-          echo "diff: ",diff
-          check diff == 90
+        if currentTestIndex < testsToDo.len:
+          let current_test = testsToDo[currentTestIndex]
+          if tick_event_for_observer.turnNumber == current_test.turn_end:
+            actionCheck(current_test.action,turn_start,turn_end,current_test.value)
+            turn_start = turn_end
+            currentTestIndex = currentTestIndex + 1
+        # else:
+        #   let stop_game = StopGame(`type`:Type.stopGame)
+        #   await controller_ws.send(stop_game.toJson)
+          
           
       else:
         dump json_message_for_controller
 
-  except:
+  except CatchableError:
     echo "error with the controller websocket:", getCurrentExceptionMsg()
     echo "LAST MESSAGE:"
     dump json_message_for_controller
@@ -167,17 +213,29 @@ suite "Running a full game":
     echo "teardown"
     close(serverProcess)
 
-  test "creating a new bot and starting it":
+  test "creating a new bot and testing the API on it":
     # start the server
     runTankRoyaleServer()
 
+    # write the tests for the bot here
+    let fileName = "out/tests/TestBot/testsToDo.csv"
+    removeFile(fileName)
+    var csv = open(fileName, fmAppend)
+    csv.setFilePos(0)
+    csv.writeLine("action|value|turn_start|turn_end")
+    for test in testsToDo:
+      csv.writeLine(test.action & "|" & $(test.value) & "|" & $(test.turn_start) & "|" & $(test.turn_end) )
+    csv.close()
+
     # run bots with booter
     let botsToRun = @[
-      BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version),
+      BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version), # fast death
+      # BotToRun(name:"Target", path:"assets/sample-bots-java-"&assets_version), # slowest death
       # BotToRun(name:"Corners", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Walls", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"RamFire", path:"assets/sample-bots-java-"&assets_version),
+
       BotToRun(name:"TestBot", path:"out/tests"),
       # BotToRun(name:"Walls", path:"out/SampleBots")
       ]

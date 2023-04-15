@@ -2,9 +2,33 @@
 import ../../src/RTR_nim_botApi
 
 # TEST LIBS: unit test, websockets
+import std/[parsecsv, parseutils]
 import ws, asyncdispatch
 
 let websocketServer:WebSocket = waitFor newWebSocket("ws://localhost:9001")
+
+type
+  Test = object
+    action:string
+    value:float
+    turn_start:int
+    turn_end:int
+
+# import tests
+var testsToDo = newSeq[Test]()
+var p:CsvParser
+p.open("testsToDo.csv", separator = '|')
+p.readHeaderRow()
+while p.readRow():
+  let action = p.rowEntry("action")
+  var value:float
+  var turn_start, turn_end:int
+  discard parseFloat(p.rowEntry("value"), value)
+  discard parseInt(p.rowEntry("turn_start"), turn_start)
+  discard parseInt(p.rowEntry("turn_end"), turn_end)
+  testsToDo.add(Test(action: action, value: value, turn_start: turn_start, turn_end: turn_end))
+p.close()
+
 
 # STEP 2: create a new object reference of Bot object
 type
@@ -19,15 +43,22 @@ test_bot.start()
 
 # DEBUG VARIABLES
 method run(bot:TestBot) =
-  echo "[TestBot] run started"
-  turnLeft(90)
-  # go()
-  echo "[TestBot] done 90 degrees"
-    # echo "running"
-  # var i = 0
-  # while(isRunning() and i < 10000):
-  #   i = i + 1
-  #   go()
+  echo "[TestBot] run started "
+  var test_index = 0
+  while isRunning() and test_index < testsToDo.len:
+    let test = testsToDo[test_index]
+    if test.turn_start == getTurnNumber():
+      case test.action:
+      of "turnLeft":
+        turnLeft(test.value)
+      of "turnRight":
+        turnRight(test.value)
+      
+      echo "[TestBot] ",test.action," done ",test.value, " at turn ",getTurnNumber()
+      test_index = test_index + 1
+    else:
+      go()
+    
 
 method onSkippedTurn(bot:TestBot, skipped_turn_event:SkippedTurnEvent) =
   asyncCheck websocketServer.send("skipped")

@@ -30,6 +30,7 @@ type
     serverHandshake = "ServerHandshake"
     skippedTurnEvent = "SkippedTurnEvent"
     startGame = "StartGame"
+    stopGame = "StopGame"
     tickEventForBot = "TickEventForBot"
     tickEventForObserver = "TickEventForObserver"
     wonRoundEvent = "WonRoundEvent"
@@ -273,6 +274,8 @@ type
     botAddresses*: seq[BotAddress] #List of bot addresses
 
   SkippedTurnEvent* = ref object of Event
+
+  StopGame* = ref object of Message
 
   TickEventForBot* = ref object of Event
     roundNumber*: int #The current round number in the battle when event occurred
