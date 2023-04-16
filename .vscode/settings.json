@@ -1,0 +1,9 @@
+{
+  // "nim.project": ["test_runningBot.nim", "TestBot.nim", "RTR_nim_botApi.nim"],
+  "nim.project": ["RTR_nim_botApi", "TestBot.nim", "test_runningBot.nim"],
+  "nim.provider": "lsp"
+  // "nim.projectMapping": {
+  //   "projectFile": "RTR_nim_botApi.nim",
+  //   "fileRegex": "RTR_nim_botApi/.*\\.nim"
+  // }
+}
