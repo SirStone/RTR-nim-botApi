@@ -75,8 +75,8 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [ ] distanceTo​(double x, double y) _#Calculates the distance from the bot's coordinates to a point x,y._
 - [x] getArenaHeight() _#Height of the arena measured in units._
 - [x] getArenaWidth() _#Width of the arena measured in units._
-- [ ] getBodyColor() _#Returns the color of the body._
-- [ ] getBulletColor() _#Returns the color of the fired bullets._
+- [x] getBodyColor() _#Returns the color of the body._
+- [x] getBulletColor() _#Returns the color of the fired bullets._
 - [ ] getBulletStates() _#Current bullet states._
 - [x] getDirection() _#Current driving direction of the bot in degrees._
 - [ ] getEnemyCount() _#Number of enemies left in the round._
@@ -85,40 +85,40 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [ ] getEvents() _#Events that remain to be processed in event handlers, which is useful to see the events that remain from event handlers being called before other event handlers._
 - [ ] getFirepower() _#Returns the firepower._
 - [ ] getGameType() _#Game type, e.g._
-- [ ] getGunColor() _#Returns the color of the gun._
+- [x] getGunColor() _#Returns the color of the gun._
 - [ ] getGunCoolingRate() _#Gun cooling rate._
 - [ ] getGunDirection() _#Current direction of the gun in degrees._
 - [ ] getGunHeat() _#Current gun heat._
-- [ ] getGunTurnRate() _#Returns the gun turn rate in degrees per turn._
+- [x] getGunTurnRate() _#Returns the gun turn rate in degrees per turn._
 - [ ] getMaxGunTurnRate() _#Returns the maximum gun turn rate in degrees per turn._
 - [ ] getMaxInactivityTurns() _#The maximum number of inactive turns allowed the bot will become zapped by the game for being inactive._
-- [ ] getMaxRadarTurnRate() _#Returns the maximum radar turn rate in degrees per turn._
+- [x] getMaxRadarTurnRate() _#Returns the maximum radar turn rate in degrees per turn._
 - [ ] getMaxSpeed() _#Returns the maximum speed in units per turn._
 - [ ] getMaxTurnRate() _#Returns the maximum turn rate of the bot in degrees per turn._
 - [ ] getMyId() _#Unique id of this bot, which is available when the game has started._
 - [ ] getNumberOfRounds() _#The number of rounds in a battle._
-- [ ] getRadarColor() _#Returns the color of the radar._
+- [x] getRadarColor() _#Returns the color of the radar._
 - [ ] getRadarDirection() _#Current direction of the radar in degrees._
-- [ ] getRadarTurnRate() _#Returns the radar turn rate in degrees per turn._
+- [x] getRadarTurnRate() _#Returns the radar turn rate in degrees per turn._
 - [ ] getRoundNumber() _#Current round number._
-- [ ] getScanColor() _#Returns the color of the scan arc._
+- [x] getScanColor() _#Returns the color of the scan arc._
 - [ ] getSpeed() _#The current speed measured in units per turn._
 - [ ] getTargetSpeed() _#Returns the target speed in units per turn._
 - [ ] getTimeLeft() _#The number of microseconds left of this turn before the bot will skip the turn._
-- [ ] getTracksColor() _#Returns the color of the tracks._
-- [ ] getTurnNumber() _#Current turn number._
-- [ ] getTurnRate() _#Returns the turn rate of the bot in degrees per turn._
+- [x] getTracksColor() _#Returns the color of the tracks._
+- [x] getTurnNumber() _#Current turn number._
+- [x] getTurnRate() _#Returns the turn rate of the bot in degrees per turn._
 - [ ] getTurnTimeout() _#The turn timeout is important as the bot needs to take action by calling go() before the turn timeout occurs._
-- [ ] getTurretColor() _#Returns the color of the gun turret._
+- [x] getTurretColor() _#Returns the color of the gun turret._
 - [ ] getVariant() _#The game variant, which is "Tank Royale"._
 - [ ] getVersion() _#Game version, e.g. "1.0.0"._
 - [ ] getX() _#Current X coordinate of the center of the bot._
 - [ ] getY() _#Current Y coordinate of the center of the bot._
 - [ ] go() _#Commits the current commands (actions), which finalizes the current turn for the bot._
 - [ ] gunBearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the bot's gun and the direction to the point x,y._
-- [ ] isAdjustGunForBodyTurn() _#Checks if the gun is set to adjust for the bot turning, i.e. to turn independent of the bot's body turn._
-- [ ] isAdjustRadarForBodyTurn() _#Checks if the radar is set to adjust for the body turning, i.e. to turn independent of the body's turn._
-- [ ] isAdjustRadarForGunTurn() _#Checks if the radar is set to adjust for the gun turning, i.e. to turn independent of the gun's turn._
+- [x] isAdjustGunForBodyTurn() _#Checks if the gun is set to adjust for the bot turning, i.e. to turn independent of the bot's body turn._
+- [x] isAdjustRadarForBodyTurn() _#Checks if the radar is set to adjust for the body turning, i.e. to turn independent of the body's turn._
+- [x] isAdjustRadarForGunTurn() _#Checks if the radar is set to adjust for the gun turning, i.e. to turn independent of the gun's turn._
 - [ ] isDisabled() _#Specifies if the bot is disabled, i.e., when the energy is zero._
 - [ ] isStopped() _#Checks if the movement has been stopped._
 - [ ] normalizeAbsoluteAngle​(double angle) _#Normalizes an angle to an absolute angle into the range [0,360[_
@@ -138,7 +138,7 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [x] onHitBot​(HitBotEvent botHitBotEvent) _#The event handler triggered when the bot has collided with another bot._
 - [x] onHitByBullet​(HitByBulletEvent hitByBulletEvent) _#The event handler triggered when the bot has been hit by a bullet._
 - [x] onHitWall​(HitWallEvent botHitWallEvent) _#The event handler triggered when the bot has hit a wall._
-- [ ] onRoundEnded​(RoundEndedEvent roundEndedEvent) _#The event handler triggered when a round has ended._
+- [x] onRoundEnded​(RoundEndedEvent roundEndedEvent) _#The event handler triggered when a round has ended._
 - [x] onRoundStarted​(RoundStartedEvent roundStartedEvent) _#The event handler triggered when a new round has started._
 - [x] onScannedBot​(ScannedBotEvent scannedBotEvent) _#The event handler triggered when the bot has skipped a turn._
 - [x] onSkippedTurn​(SkippedTurnEvent skippedTurnEvent) _#The event handler triggered when the bot has skipped a turn._
@@ -161,17 +161,17 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [ ] setMaxRadarTurnRate​(double maxRadarTurnRate) _#Sets the maximum turn rate which applies to turn the radar to the left or right._
 - [ ] setMaxSpeed​(double maxSpeed) _#Sets the maximum speed which applies when moving forward and backward._
 - [ ] setMaxTurnRate​(double maxTurnRate) _#Sets the maximum turn rate which applies to turn the bot to the left or right._
-- [ ] setRadarColor​(Color color) _#Sets the color of the radar._
+- [x] setRadarColor​(Color color) _#Sets the color of the radar._
 - [ ] setRadarTurnRate​(double gunRadarTurnRate) _#Sets the turn rate of the radar, which can be positive and negative._
 - [ ] setRescan() _#Sets the bot to rescan with the radar._
 - [ ] setResume() _#Sets the bot to scan (again) with the radar._
-- [ ] setScanColor​(Color color) _#Sets the color of the scan arc._
+- [x] setScanColor​(Color color) _#Sets the color of the scan arc._
 - [ ] setStop() _#Set the bot to stop all movement including turning the gun and radar._
 - [ ] setTargetSpeed​(double targetSpeed) _#Sets the new target speed for the bot in units per turn._
-- [ ] setTracksColor​(Color color) _#Sets the color of the tracks._
-- [ ] setTurnRate​(double turnRate) _#Sets the turn rate of the bot, which can be positive and negative._
-- [ ] setTurretColor​(Color color) _#Sets the color of the gun turret._
-- [ ] start() _#The method used to start running the bot._
+- [x] setTracksColor​(Color color) _#Sets the color of the tracks._
+- [x] setTurnRate​(double turnRate) _#Sets the turn rate of the bot, which can be positive and negative._
+- [x] setTurretColor​(Color color) _#Sets the color of the gun turret._
+- [x] start() _#The method used to start running the bot._
 
 ### IBot methods to implement
 - [ ] back​(double distance) _#Moves the bot backward until it has traveled a specific distance from its current position, or it is moving into an obstacle._

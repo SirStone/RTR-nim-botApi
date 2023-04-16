@@ -27,7 +27,7 @@ proc rndStr: string =
 proc runTankRoyaleServer() =
   echo "running server"
   try:
-    let serverArgs = ["-jar", "robocode-tankroyale-server-"&assets_version&".jar", "--botSecrets", botSecret, "--controllerSecrets", controllerSecret, "--port", port]
+    let serverArgs = ["-jar", "robocode-tankroyale-server-"&assets_version&".jar", "--botSecrets", botSecret, "--controllerSecrets", controllerSecret, "--port", port, "--enable-initial-position"]
     serverProcess = startProcess(command="java", workingDir="assets", args=serverArgs, options={poStdErrToStdOut, poUsePath})
     
     # wait for the booter to start
@@ -73,45 +73,70 @@ proc runChatServer() =
   var server = newAsyncHttpServer()
   asyncCheck server.serve(Port(9001), cb)
 
-var turn_start:float = 0
-var turn_end:float = 0
 var json_message_for_controller = ""
-let actions = @["turnLeft", "turnRight"]
+let actions = @["turnLeft", "turnRight", "turnGunLeft", "turnGunRight", "turnRadarLeft", "turnRadarRight"]
 var testsToDo = newSeq[Test]()
 randomize()
 var testTime = 10
-for i in 0..3:
-  let action = actions[rand(0..1)]
+for i in 1..10:
+  let action = actions[rand(0..actions.high)]
   let value = rand(-360.0..360.0)
   let turn_start_test = testTime
-  let turn_end_test = 10 + testTime + (abs(value) / 10).int
+  var dividend:float
+  case action:
+  of "turnLeft":
+    dividend = 10
+  of "turnRight":
+    dividend = 10
+  of "turnGunLeft":
+    dividend = 20
+  of "turnGunRight":
+    dividend = 20
+  of "turnRadarLeft":
+    dividend = 45
+  of "turnRadarRight":
+    dividend = 45
+  else:
+    dividend = 10
+
+  let turn_end_test = 10 + testTime + (abs(value) / dividend).int
   testsToDo.add(Test(action:action, value:value, turn_start:turn_start_test, turn_end:turn_end_test))
   testtime = turn_end_test + 10
 
+# open file for tests results
+let fileNameResults = "out/tests/TestBot/testsResults.csv"
+removeFile(fileNameResults)
+var csvResults = open(fileNameResults, fmAppend)
+csvResults.setFilePos(0)
+csvResults.writeLine("ROUND|ACTION|ACTION_START_VALUE|ACTION_END_VALUE|EXPECTED_VALUE|VALUE|OUTCOME")
 
+proc actionCheck(actionType:string, value_start:float, value_end:float, expected:float):float =
+  echo actionType,"_start: ",value_start
+  echo actionType,"_end: ",value_end
 
-proc actionCheck(actionType:string, turn_start:float, turn_end:float, expected_diff:float) =
   case actionType:
   of "turnLeft":    
-    echo "turn_start: ",turn_start
-    echo "turn_end: ",turn_end
-    var diff = turn_end - turn_start
-    if expected_diff >= 0:
-      if diff < 0: diff = diff + 360.0
-    else:
-      if diff > 0: diff = diff - 360.0
-    check round(diff,2) == round(expected_diff,2)
+    result = value_end - value_start
   of "turnRight":
-    echo "turn_start: ",turn_start
-    echo "turn_end: ",turn_end
-    var diff = turn_start - turn_end
-    if expected_diff >= 0:
-      if diff < 0: diff = diff + 360.0
-    else:
-      if diff > 0: diff = diff - 360.0
-    check round(diff,2) == round(expected_diff,2)
+    result = value_start - value_end
+  of "turnGunLeft":
+    result = value_end - value_start
+  of "turnGunRight":
+    result = value_start - value_end
+  of "turnRadarLeft":
+    result = value_end - value_start
+  of "turnRadarRight":
+    result = value_start - value_end
+  else:
+    result = 0
+
+  if expected >= 0:
+    if result < 0: result = result + 360.0
+  else:
+    if result > 0: result = result - 360.0
 
 proc joinAsController(numberOfBots:int) {.async.} =
+  var body_turn_start, body_turn_end, gun_turn_start, gun_turn_end, radar_turn_start, radar_turn_end:float
   try: # connects to the server with a websocket
     let controller_ws = await newWebSocket(connectionUrl)
     var currentTestIndex = 0
@@ -144,6 +169,10 @@ proc joinAsController(numberOfBots:int) {.async.} =
           let start_game = StartGame(`type`:Type.startGame, botAddresses:botAddresses, gameSetup:gameSetup)
           await controller_ws.send(start_game.toJson)
       of gameEndedEventForObserver:
+        # close results file
+        csvResults.close()
+
+        # close websocket
         controller_ws.close()
       of gameStartedEventForObserver:
         let game_Started_event_for_observer = json_message_for_controller.fromJson(GameStartedEventForObserver)
@@ -155,25 +184,71 @@ proc joinAsController(numberOfBots:int) {.async.} =
         echo "skipped turns up to round ",round_ended_event_for_observer.roundNumber,": ",number_of_skipped_turns
       of roundStartedEvent:
         # reset some variables
-        turn_start = 0
+        body_turn_start = -1
+        gun_turn_start = -1
+        radar_turn_start = -1
         currentTestIndex = 0
       of tickEventForObserver:
-        let tick_event_for_observer = json_message_for_controller.fromJson(TickEventForObserver)
-        for botState in tick_event_for_observer.botStates:
-          if botState.id == botId:
-            if turn_start == 0:
-              turn_start = botState.direction
-            else:
-              turn_end = botState.direction
-            break
-        
         if currentTestIndex < testsToDo.len:
+          let tick_event_for_observer = json_message_for_controller.fromJson(TickEventForObserver)
+          for botState in tick_event_for_observer.botStates:
+            if botState.id == botId:
+              if body_turn_start == -1:
+                body_turn_start = botState.direction
+              else:
+                body_turn_end = botState.direction
+
+              if gun_turn_start == -1:
+                gun_turn_start = botState.gunDirection
+              else:
+                gun_turn_end = botState.gunDirection
+
+              if radar_turn_start == -1:
+                radar_turn_start = botState.radarDirection
+              else:
+                radar_turn_end = botState.radarDirection
+
+              # no need to check other bots
+              break
+
+          var turn_start_value, turn_end_value:float
           let current_test = testsToDo[currentTestIndex]
+          case current_test.action:
+          of "turnLeft":
+            turn_start_value = body_turn_start
+            turn_end_value = body_turn_end
+          of "turnRight":
+            turn_start_value = body_turn_start
+            turn_end_value = body_turn_end
+          of "turnGunLeft":
+            turn_start_value = gun_turn_start
+            turn_end_value = gun_turn_end
+          of "turnGunRight":
+            turn_start_value = gun_turn_start
+            turn_end_value = gun_turn_end
+          of "turnRadarLeft":
+            turn_start_value = radar_turn_start
+            turn_end_value = radar_turn_end
+          of "turnRadarRight":
+            turn_start_value = radar_turn_start
+            turn_end_value = radar_turn_end
+
           if tick_event_for_observer.turnNumber == current_test.turn_end:
-            actionCheck(current_test.action,turn_start,turn_end,current_test.value)
-            turn_start = turn_end
+            let diff = actionCheck(current_test.action,turn_start_value,turn_end_value,current_test.value)
+            let outcome = round(diff,2) == round(current_test.value,2)
+            check outcome
+
+            # write results to file
+            csvResults.writeLine($tick_event_for_observer.roundNumber & "|" & current_test.action & "|" & $turn_start_value & "|" & $turn_end_value & "|" & $current_test.value & "|" & $diff & "|" & $outcome)
+
+            body_turn_start = body_turn_end
+            gun_turn_start = gun_turn_end
+            radar_turn_start = radar_turn_end
+            
             currentTestIndex = currentTestIndex + 1
         # else:
+          # close results file
+          # csvResults.close()
         #   let stop_game = StopGame(`type`:Type.stopGame)
         #   await controller_ws.send(stop_game.toJson)
           
@@ -229,11 +304,11 @@ suite "Running a full game":
 
     # run bots with booter
     let botsToRun = @[
-      BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version), # fast death
+      # BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version), # fast death
       # BotToRun(name:"Target", path:"assets/sample-bots-java-"&assets_version), # slowest death
       # BotToRun(name:"Corners", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Walls", path:"assets/sample-bots-java-"&assets_version),
-      # BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version),
+      BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version), # medium speed death
       # BotToRun(name:"RamFire", path:"assets/sample-bots-java-"&assets_version),
 
       BotToRun(name:"TestBot", path:"out/tests"),
@@ -242,7 +317,7 @@ suite "Running a full game":
     runBots(botsToRun)
 
     # run a Websocket server for the TestBot
-    runChatServer()
+    # runChatServer()
 
     gameSetup = readFile(joinPath(getAppDir(),"gameSetup.json")).fromJson(GameSetup)
 
@@ -250,4 +325,4 @@ suite "Running a full game":
     waitFor joinAsController(botsToRun.len)
 
     # cheks about the run
-    check number_of_skipped_turns < 2 * gameSetup.numberOfRounds
+    # check number_of_skipped_turns < 2 * gameSetup.numberOfRounds

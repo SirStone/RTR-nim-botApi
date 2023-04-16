@@ -8,15 +8,15 @@
     "isMinNumberOfParticipantsLocked":true,
     "maxNumberOfParticipants":100,
     "isMaxNumberOfParticipantsLocked":true,
-    "numberOfRounds":3,
+    "numberOfRounds":2,
     "isNumberOfRoundsLocked":false,
     "gunCoolingRate":0.1,
     "isGunCoolingRateLocked":false,
-    "maxInactivityTurns":450,
+    "maxInactivityTurns":10,
     "isMaxInactivityTurnsLocked":false,
     "turnTimeout":30000,
     "isTurnTimeoutLocked":false,
     "readyTimeout":1000000,
     "isReadyTimeoutLocked":false,
-    "defaultTurnsPerSecond":30
+    "defaultTurnsPerSecond":10
 }

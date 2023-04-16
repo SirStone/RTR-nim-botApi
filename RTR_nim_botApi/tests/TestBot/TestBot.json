@@ -1,6 +1,6 @@
 {
   "name": "TeStBoT",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "gameTypes": ["melee", "classic", "1v1"],
   "authors": ["SirStone"],
   "description": "bot used for testing the API",

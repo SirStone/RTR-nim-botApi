@@ -38,8 +38,8 @@ type
   Message* = ref object of RootObj
     `type`*: Type
 
-  InitialPosition = ref object of RootObj
-    x,y, angle*: float #The x,y and angle coordinate. When it is not set, a random value will be used
+  InitialPosition* = ref object of RootObj
+    x*,y*,angle*: float #The x,y and angle coordinate. When it is not set, a random value will be used
 
   Event* = ref object of Message
     turnNumber*: int #The turn number in current round when event occurred

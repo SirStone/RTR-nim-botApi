@@ -3,9 +3,9 @@ import ../../src/RTR_nim_botApi
 
 # TEST LIBS: unit test, websockets
 import std/[parsecsv, parseutils]
-import ws, asyncdispatch
+# import ws, asyncdispatch
 
-let websocketServer:WebSocket = waitFor newWebSocket("ws://localhost:9001")
+# let websocketServer:WebSocket = waitFor newWebSocket("ws://localhost:9001")
 
 type
   Test = object
@@ -16,18 +16,19 @@ type
 
 # import tests
 var testsToDo = newSeq[Test]()
-var p:CsvParser
-p.open("testsToDo.csv", separator = '|')
-p.readHeaderRow()
-while p.readRow():
-  let action = p.rowEntry("action")
-  var value:float
-  var turn_start, turn_end:int
-  discard parseFloat(p.rowEntry("value"), value)
-  discard parseInt(p.rowEntry("turn_start"), turn_start)
-  discard parseInt(p.rowEntry("turn_end"), turn_end)
-  testsToDo.add(Test(action: action, value: value, turn_start: turn_start, turn_end: turn_end))
-p.close()
+proc importTests() =
+  var p:CsvParser
+  p.open("testsToDo.csv", separator = '|')
+  p.readHeaderRow()
+  while p.readRow():
+    let action = p.rowEntry("action")
+    var value:float
+    var turn_start, turn_end:int
+    discard parseFloat(p.rowEntry("value"), value)
+    discard parseInt(p.rowEntry("turn_start"), turn_start)
+    discard parseInt(p.rowEntry("turn_end"), turn_end)
+    testsToDo.add(Test(action: action, value: value, turn_start: turn_start, turn_end: turn_end))
+  p.close()
 
 
 # STEP 2: create a new object reference of Bot object
@@ -39,12 +40,17 @@ var test_bot = TestBot()
 
 # STEP 4: start the bot calling for the initBot(json_file, connect[true/false]) proc
 test_bot.newBot("TestBot.json")
-test_bot.start()
+test_bot.start( position=InitialPosition(x:400, y:300, angle:0))
 
 # DEBUG VARIABLES
 method run(bot:TestBot) =
+  importTests()
   echo "[TestBot] run started "
   var test_index = 0
+  setAdjustGunForBodyTurn(true)
+  setAdjustRadarForGunTurn(true)
+  setAdjustRadarForBodyTurn(true)
+
   while isRunning() and test_index < testsToDo.len:
     let test = testsToDo[test_index]
     if test.turn_start == getTurnNumber():
@@ -53,6 +59,14 @@ method run(bot:TestBot) =
         turnLeft(test.value)
       of "turnRight":
         turnRight(test.value)
+      of "turnGunLeft":
+        turnGunLeft(test.value)
+      of "turnGunRight":
+        turnGunRight(test.value)
+      of "turnRadarLeft":
+        turnRadarLeft(test.value)
+      of "turnRadarRight":
+        turnRadarRight(test.value)
       
       echo "[TestBot] ",test.action," done ",test.value, " at turn ",getTurnNumber()
       test_index = test_index + 1
@@ -61,7 +75,8 @@ method run(bot:TestBot) =
     
 
 method onSkippedTurn(bot:TestBot, skipped_turn_event:SkippedTurnEvent) =
-  asyncCheck websocketServer.send("skipped")
+  # asyncCheck websocketServer.send("skipped")
+  echo "[TestBot] skipped turn ",skipped_turn_event.turnNumber
 
 method onGameStarted(bot:TestBot, game_started_event_for_bot:GameStartedEventForBot) =
   let id = game_started_event_for_bot.myId
@@ -82,6 +97,9 @@ method onGameEnded(bot:TestBot, game_ended_event_for_bot:GameEndedEventForBot) =
     echo "[TestBot]RESULTS ",game_ended_event_for_bot.results[]
 
 method onTick(bot:TestBot, tick_event_for_bot:TickEventForBot) =
+  stdout.write "."
+  stdout.flushFile()
+
   if(false):
     echo "[TestBot]TICK:",tick_event_for_bot[]
 
@@ -90,7 +108,7 @@ method onGameAborted(bot:TestBot, game_aborted_event:GameAbortedEvent) =
     echo "[TestBot]Game aborted"
 
 method onDeath(bot:TestBot, bot_death_event:BotDeathEvent) = 
-  if(false):
+  if(true):
     echo "[TestBot]BOT DEAD:",bot_death_event[]
 
 method onHitWall(bot:TestBot, bot_hit_wall_event:BotHitWallEvent) = 

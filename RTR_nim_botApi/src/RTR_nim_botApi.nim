@@ -14,6 +14,7 @@ var firstTickSeen:bool = false
 var lastTurnWeSentIntent:int = -1
 var sendIntent:bool = false
 var gs_ws:WebSocket
+var botLocked:bool = false
 
 ## GAME VARAIBLES
 # game setup
@@ -23,6 +24,7 @@ var myId: int
 # tick data for Bot
 var turnNumber*,roundNumber:int
 var energy,x,y,direction,gunDirection,radarDirection,radarSweep,speed,turnRate,gunTurnRate,radarTurnRate,gunHeat:float
+var initialPosition:InitialPosition = InitialPosition(x:0, y:0, angle:0)
 
 # game physics
 let maxSpeed:float = 8
@@ -39,8 +41,11 @@ var intent_bodyColor,intent_turretColor,intent_radarColor,intent_bulletColor,int
 
 # remainings
 var remaining_turnRate:float = 0
+var remaining_turnGunRate:float = 0
+var remaining_turnRadarRate:float = 0
 
 proc updateRemainings() =
+  # body turn
   if remaining_turnRate != 0:
     if remaining_turnRate > 0:
       intent_turnRate = min(remaining_turnRate, maxTurnRate)
@@ -48,6 +53,24 @@ proc updateRemainings() =
     else:
       intent_turnRate = max(remaining_turnRate, -maxTurnRate)
       remaining_turnRate = min(0, remaining_turnRate + maxTurnRate)
+
+  # gun turn
+  if remaining_turnGunRate != 0:
+    if remaining_turnGunRate > 0:
+      intent_gunTurnRate = min(remaining_turnGunRate, maxGunTurnRate)
+      remaining_turnGunRate = max(0, remaining_turnGunRate - maxGunTurnRate)
+    else:
+      intent_gunTurnRate = max(remaining_turnGunRate, -maxGunTurnRate)
+      remaining_turnGunRate = min(0, remaining_turnGunRate + maxGunTurnRate)
+
+  # radar turn
+  if remaining_turnRadarRate != 0:
+    if remaining_turnRadarRate > 0:
+      intent_radarTurnRate = min(remaining_turnRadarRate, maxRadarTurnRate)
+      remaining_turnRadarRate = max(0, remaining_turnRadarRate - maxRadarTurnRate)
+    else:
+      intent_radarTurnRate = max(remaining_turnRadarRate, -maxRadarTurnRate)
+      remaining_turnRadarRate = min(0, remaining_turnRadarRate + maxRadarTurnRate)
 
 # the following section contains all the methods that are supposed to be overrided by the bot creator
 method run(bot:Bot) {.base.} = discard
@@ -116,6 +139,7 @@ proc setServerURL*(bot:Bot, url:string) =
 proc isRunning*():bool =
   return runningState
 
+############ BOT SETUP ############
 proc setAdjustGunForBodyTurn*(adjust:bool) =
   intent_adjustGunForBodyTurn = adjust
 
@@ -125,49 +149,171 @@ proc setAdjustRadarForGunTurn*(adjust:bool) =
 proc setAdjustRadarForBodyTurn*(adjust:bool) =
   intent_adjustRadarForBodyTurn = adjust
 
+proc isAdjustGunForBodyTurn*():bool =
+  return intent_adjustGunForBodyTurn
+
+proc isAdjustRadarForGunTurn*():bool =
+  return intent_adjustRadarForGunTurn
+
+proc isAdjustRadarForBodyTurn*():bool =
+  return intent_adjustRadarForBodyTurn
+
+############ COLORS ############
 proc setBodyColor*(color:string) =
-  intent_bodyColor = $color
+  intent_bodyColor = color
 
 proc setTurretColor*(color:string) =
-  intent_turretColor = $color
+  intent_turretColor = color
 
 proc setRadarColor*(color:string) =
-  intent_radarColor = $color
+  intent_radarColor = color
 
 proc setBulletColor*(color:string) =
-  intent_bulletColor = $color
+  intent_bulletColor = color
 
 proc setScanColor*(color:string) =
-  intent_scanColor = $color
+  intent_scanColor = color
+
+proc setTracksColor*(color:string) =
+  intent_tracksColor = color
+
+proc setGunColor*(color:string) =
+  intent_gunColor = color
+
+proc getBodyColor*():string =
+  return intent_bodyColor
+
+proc getTurretColor*():string =
+  return intent_turretColor
+
+proc getRadarColor*():string =
+  return intent_radarColor
+
+proc getBulletColor*():string =
+  return intent_bulletColor
+
+proc getScanColor*():string =
+  return intent_scanColor
+
+proc getTracksColor*():string =
+  return intent_tracksColor
+
+proc getGunColor*():string =
+  return intent_gunColor
+
+############ MISC GETTERS ############
+proc getArenaHeight*():int =
+  return gameSetup.arenaHeight
 
 proc getArenaWidth*():int =
   return gameSetup.arenaWidth
 
-proc getArenaHeight*():int =
-  return gameSetup.arenaHeight
-
-proc getDirection*():float =
-  return direction
-
 proc getTurnNumber*():int =
   return turnNumber
 
+proc getTurnRemaining*():float =
+  return remaining_turnRate
+
+############ TURNING RADAR ############
+proc setTurnRadarLeft*(degrees:float) =
+  if not botLocked:
+    remaining_turnRadarRate = degrees
+
+proc setTurnRadarRight*(degrees:float) =
+  setTurnRadarLeft(-degrees)
+
+proc turnRadarLeft*(degrees:float) =
+  # ask to turnRadar left for all degrees, the server will take care of turnRadaring the bot the max amount of degrees allowed
+  setTurnRadarLeft(degrees)
+  
+  # lock the bot, no other actions must be done until the action is completed
+  botLocked = true
+
+  # go until the bot is not running or the remaining_turnRadarRate is 0
+  while runningState and remaining_turnRadarRate != 0: go()
+
+  # unlock the bot
+  botLocked = false
+
+proc turnRadarRight*(degrees:float) =
+  turnRadarLeft(-degrees)
+
+proc getRadarTurnRate*():float =
+  return remaining_turnRadarRate
+
+proc getRadarDirection*():float =
+  return radarDirection
+
+proc getMaxRadarTurnRate*():float =
+  return maxRadarTurnRate
+
+############ TURNING GUN ############
+proc setTurnGunLeft*(degrees:float) =
+  if not botLocked:
+    remaining_turnGunRate = degrees
+
+proc setTurnGunRight*(degrees:float) =
+  setTurnGunLeft(-degrees)
+
+proc turnGunLeft*(degrees:float) =
+  # ask to turnGun left for all degrees, the server will take care of turnGuning the bot the max amount of degrees allowed
+  setTurnGunLeft(degrees)
+  
+  # lock the bot, no other actions must be done until the action is completed
+  botLocked = true
+
+  # go until the bot is not running or the remaining_turnGunRate is 0
+  while runningState and remaining_turnGunRate != 0: go()
+
+  # unlock the bot
+  botLocked = false
+
+proc turnGunRight*(degrees:float) =
+  turnGunLeft(-degrees)
+
+proc getGunTurnRate*():float =
+  return remaining_turnGunRate
+
+proc getGunDirection*():float =
+  return gunDirection
+
+proc getMaxGunTurnRate*():float =
+  return maxGunTurnRate
+
+############ TURNING BODY ############
 proc setTurnLeft*(degrees:float) =
-  remaining_turnRate = degrees
+  if not botLocked:
+    remaining_turnRate = degrees
+
+proc setTurnRight*(degrees:float) =
+  setTurnLeft(-degrees)
 
 proc turnLeft*(degrees:float) =
   # ask to turn left for all degrees, the server will take care of turning the bot the max amount of degrees allowed
   setTurnLeft(degrees)
   
-  # send intent, no other actions must be done until the action is completed
+  # lock the bot, no other actions must be done until the action is completed
+  botLocked = true
+
+  # go until the bot is not running or the remaining_turnRate is 0
   while runningState and remaining_turnRate != 0: go()
-    
-proc setTurnRight*(degrees:float) =
-  setTurnLeft(-degrees)
+
+  # unlock the bot
+  botLocked = false
 
 proc turnRight*(degrees:float) =
   turnLeft(-degrees)
 
+proc getTurnRate*():float =
+  return remaining_turnRate
+
+proc getDirection*():float =
+  return direction
+
+proc getMaxTurnRate*():float =
+  return maxTurnRate
+
+############ MOVING ############
 proc forward*(degrees:float) = discard #TODO
 
 proc stopBot() = 
@@ -186,7 +332,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
   case `type`:
   of serverHandshake:
     let server_handshake = json_message.fromJson(ServerHandshake)
-    let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret)
+    let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret, initialPosition:initialPosition)
     await gs_ws.send(bot_handshake.toJson)
   
   of gameStartedEventForBot:
@@ -340,7 +486,8 @@ proc newBot*(bot:Bot, json_file:string) =
   intent_rescan = false
   intent_fireAssist = false
 
-proc start*(bot:Bot, connect:bool = true) =
+proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosition(x:0,y:0,angle:0)) =
+  initialPosition = position
 
   # connect to the Game Server
   if(connect):
