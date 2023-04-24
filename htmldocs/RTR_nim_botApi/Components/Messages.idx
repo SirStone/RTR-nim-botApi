@@ -1,0 +1,73 @@
+botHandshake	RTR_nim_botApi/Components/Messages.html#botHandshake	Type.botHandshake	
+botIntent	RTR_nim_botApi/Components/Messages.html#botIntent	Type.botIntent	
+botReady	RTR_nim_botApi/Components/Messages.html#botReady	Type.botReady	
+gameStartedEventForBot	RTR_nim_botApi/Components/Messages.html#gameStartedEventForBot	Type.gameStartedEventForBot	
+gameEndedEventForBot	RTR_nim_botApi/Components/Messages.html#gameEndedEventForBot	Type.gameEndedEventForBot	
+gameEndedEventForObserver	RTR_nim_botApi/Components/Messages.html#gameEndedEventForObserver	Type.gameEndedEventForObserver	
+gameAbortedEvent	RTR_nim_botApi/Components/Messages.html#gameAbortedEvent	Type.gameAbortedEvent	
+roundStartedEvent	RTR_nim_botApi/Components/Messages.html#roundStartedEvent	Type.roundStartedEvent	
+roundEndedEvent	RTR_nim_botApi/Components/Messages.html#roundEndedEvent	Type.roundEndedEvent	
+roundEndedEventForBot	RTR_nim_botApi/Components/Messages.html#roundEndedEventForBot	Type.roundEndedEventForBot	
+botDeathEvent	RTR_nim_botApi/Components/Messages.html#botDeathEvent	Type.botDeathEvent	
+botHitBotEvent	RTR_nim_botApi/Components/Messages.html#botHitBotEvent	Type.botHitBotEvent	
+botHitWallEvent	RTR_nim_botApi/Components/Messages.html#botHitWallEvent	Type.botHitWallEvent	
+botInfo	RTR_nim_botApi/Components/Messages.html#botInfo	Type.botInfo	
+botListUpdate	RTR_nim_botApi/Components/Messages.html#botListUpdate	Type.botListUpdate	
+bulletFiredEvent	RTR_nim_botApi/Components/Messages.html#bulletFiredEvent	Type.bulletFiredEvent	
+bulletHitBotEvent	RTR_nim_botApi/Components/Messages.html#bulletHitBotEvent	Type.bulletHitBotEvent	
+bulletHitBulletEvent	RTR_nim_botApi/Components/Messages.html#bulletHitBulletEvent	Type.bulletHitBulletEvent	
+controllerHandshake	RTR_nim_botApi/Components/Messages.html#controllerHandshake	Type.controllerHandshake	
+bulletHitWallEvent	RTR_nim_botApi/Components/Messages.html#bulletHitWallEvent	Type.bulletHitWallEvent	
+hitByBulletEvent	RTR_nim_botApi/Components/Messages.html#hitByBulletEvent	Type.hitByBulletEvent	
+gameStartedEventForObserver	RTR_nim_botApi/Components/Messages.html#gameStartedEventForObserver	Type.gameStartedEventForObserver	
+roundEndedEventForObserver	RTR_nim_botApi/Components/Messages.html#roundEndedEventForObserver	Type.roundEndedEventForObserver	
+scannedBotEvent	RTR_nim_botApi/Components/Messages.html#scannedBotEvent	Type.scannedBotEvent	
+serverHandshake	RTR_nim_botApi/Components/Messages.html#serverHandshake	Type.serverHandshake	
+skippedTurnEvent	RTR_nim_botApi/Components/Messages.html#skippedTurnEvent	Type.skippedTurnEvent	
+startGame	RTR_nim_botApi/Components/Messages.html#startGame	Type.startGame	
+stopGame	RTR_nim_botApi/Components/Messages.html#stopGame	Type.stopGame	
+tickEventForBot	RTR_nim_botApi/Components/Messages.html#tickEventForBot	Type.tickEventForBot	
+tickEventForObserver	RTR_nim_botApi/Components/Messages.html#tickEventForObserver	Type.tickEventForObserver	
+wonRoundEvent	RTR_nim_botApi/Components/Messages.html#wonRoundEvent	Type.wonRoundEvent	
+Type	RTR_nim_botApi/Components/Messages.html#Type	Messages: Type	
+Message	RTR_nim_botApi/Components/Messages.html#Message	Messages: Message	
+InitialPosition	RTR_nim_botApi/Components/Messages.html#InitialPosition	Messages: InitialPosition	
+Event	RTR_nim_botApi/Components/Messages.html#Event	Messages: Event	
+BotAddress	RTR_nim_botApi/Components/Messages.html#BotAddress	Messages: BotAddress	
+BotDeathEvent	RTR_nim_botApi/Components/Messages.html#BotDeathEvent_2	Messages: BotDeathEvent	
+BotHandshake	RTR_nim_botApi/Components/Messages.html#BotHandshake_2	Messages: BotHandshake	
+BotHitBotEvent	RTR_nim_botApi/Components/Messages.html#BotHitBotEvent_2	Messages: BotHitBotEvent	
+BotHitWallEvent	RTR_nim_botApi/Components/Messages.html#BotHitWallEvent_2	Messages: BotHitWallEvent	
+BotInfo	RTR_nim_botApi/Components/Messages.html#BotInfo_2	Messages: BotInfo	
+BotIntent	RTR_nim_botApi/Components/Messages.html#BotIntent_2	Messages: BotIntent	
+BotListUpdate	RTR_nim_botApi/Components/Messages.html#BotListUpdate_2	Messages: BotListUpdate	
+BotReady	RTR_nim_botApi/Components/Messages.html#BotReady_2	Messages: BotReady	
+BotResultsForBot	RTR_nim_botApi/Components/Messages.html#BotResultsForBot	Messages: BotResultsForBot	
+BotResultsForObserver	RTR_nim_botApi/Components/Messages.html#BotResultsForObserver	Messages: BotResultsForObserver	
+BotState	RTR_nim_botApi/Components/Messages.html#BotState	Messages: BotState	
+BotStateWithId	RTR_nim_botApi/Components/Messages.html#BotStateWithId	Messages: BotStateWithId	
+BulletFiredEvent	RTR_nim_botApi/Components/Messages.html#BulletFiredEvent_2	Messages: BulletFiredEvent	
+BulletHitBotEvent	RTR_nim_botApi/Components/Messages.html#BulletHitBotEvent_2	Messages: BulletHitBotEvent	
+BulletHitBulletEvent	RTR_nim_botApi/Components/Messages.html#BulletHitBulletEvent_2	Messages: BulletHitBulletEvent	
+BulletHitWallEvent	RTR_nim_botApi/Components/Messages.html#BulletHitWallEvent_2	Messages: BulletHitWallEvent	
+BulletState	RTR_nim_botApi/Components/Messages.html#BulletState	Messages: BulletState	
+ControllerHandshake	RTR_nim_botApi/Components/Messages.html#ControllerHandshake_2	Messages: ControllerHandshake	
+GameSetup	RTR_nim_botApi/Components/Messages.html#GameSetup	Messages: GameSetup	
+GameAbortedEvent	RTR_nim_botApi/Components/Messages.html#GameAbortedEvent_2	Messages: GameAbortedEvent	
+GameEndedEventForBot	RTR_nim_botApi/Components/Messages.html#GameEndedEventForBot_2	Messages: GameEndedEventForBot	
+GameEndedEventForObserver	RTR_nim_botApi/Components/Messages.html#GameEndedEventForObserver_2	Messages: GameEndedEventForObserver	
+GameStartedEventForBot	RTR_nim_botApi/Components/Messages.html#GameStartedEventForBot_2	Messages: GameStartedEventForBot	
+GameStartedEventForObserver	RTR_nim_botApi/Components/Messages.html#GameStartedEventForObserver_2	Messages: GameStartedEventForObserver	
+HitByBulletEvent	RTR_nim_botApi/Components/Messages.html#HitByBulletEvent_2	Messages: HitByBulletEvent	
+Participant	RTR_nim_botApi/Components/Messages.html#Participant	Messages: Participant	
+RoundStartedEvent	RTR_nim_botApi/Components/Messages.html#RoundStartedEvent_2	Messages: RoundStartedEvent	
+RoundEndedEventForBot	RTR_nim_botApi/Components/Messages.html#RoundEndedEventForBot_2	Messages: RoundEndedEventForBot	
+RoundEndedEventForObserver	RTR_nim_botApi/Components/Messages.html#RoundEndedEventForObserver_2	Messages: RoundEndedEventForObserver	
+ScannedBotEvent	RTR_nim_botApi/Components/Messages.html#ScannedBotEvent_2	Messages: ScannedBotEvent	
+ServerHandshake	RTR_nim_botApi/Components/Messages.html#ServerHandshake_2	Messages: ServerHandshake	
+StartGame	RTR_nim_botApi/Components/Messages.html#StartGame_2	Messages: StartGame	
+SkippedTurnEvent	RTR_nim_botApi/Components/Messages.html#SkippedTurnEvent_2	Messages: SkippedTurnEvent	
+StopGame	RTR_nim_botApi/Components/Messages.html#StopGame_2	Messages: StopGame	
+TickEventForBot	RTR_nim_botApi/Components/Messages.html#TickEventForBot_2	Messages: TickEventForBot	
+TickEventForObserver	RTR_nim_botApi/Components/Messages.html#TickEventForObserver_2	Messages: TickEventForObserver	
+WonRoundEvent	RTR_nim_botApi/Components/Messages.html#WonRoundEvent_2	Messages: WonRoundEvent	

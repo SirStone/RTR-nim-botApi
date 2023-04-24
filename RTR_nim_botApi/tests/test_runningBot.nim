@@ -79,7 +79,7 @@ let actions = @["turnLeft", "turnRight", "turnGunLeft", "turnGunRight", "turnRad
 var testsToDo = newSeq[Test]()
 randomize()
 var testTime = 10
-for i in 1..20:
+for i in 1..30:
   let action = actions[rand(0..actions.high)]
   var value = rand(-360.0..360.0)
   let turn_start_test = testTime

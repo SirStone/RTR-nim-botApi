@@ -1,0 +1,1 @@
+nim doc --project --index:on --git.url:https://github.com/SirStone/RTR-nim-botApi --git.commit:master --git.devel:master --outdir:htmldocs src/RTR_nim_botApi.nim

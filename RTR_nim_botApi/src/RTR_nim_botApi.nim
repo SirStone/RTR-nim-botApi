@@ -1,15 +1,17 @@
-# standard libraries
+## ***ROBOCODE TANKROYALE BOT API FOR NIM***
+
+#++++++++ standard libraries ++++++++#
 import std/[os, strutils, threadpool, math]
 
-# 3rd party libraries
+#++++++++ 3rd party libraries ++++++++#
 import asyncdispatch, ws, jsony, json
 
-# local components
+#++++++++ local components ++++++++#
 import RTR_nim_botApi/Components/[Bot, Messages]
 export Bot, Messages
 
-# system variables
-var runningState*:bool
+#++++++++ system variables ++++++++#
+var runningState:bool
 var firstTickSeen:bool = false
 var lastTurnWeSentIntent:int = -1
 var sendIntent:bool = false
@@ -17,18 +19,16 @@ var gs_ws:WebSocket
 var botLocked:bool = false
 var isOverDriving:bool = false
 
-## GAME VARAIBLES
-# game setup
-var gameSetup:GameSetup
-# my ID for the server
-var myId: int
-# tick data for Bot
-var turnNumber*,roundNumber:int
+#++++++++ GAME VARAIBLES ++++++++#
+var gameSetup:GameSetup # game setup
+var myId: int # my ID from the server
+
+#++++++++ TICK DATA FROM SERVER ++++++++#
+var turnNumber,roundNumber:int
 var energy,x,y,direction,gunDirection,radarDirection,radarSweep,speed,turnRate,gunTurnRate,radarTurnRate,gunHeat:float
 var initialPosition:InitialPosition = InitialPosition(x:0, y:0, angle:0)
 
-############ GAME PHYSICS ############
-######################################
+#++++++++ GAME PHYSICS ++++++++#
 # bots accelerate at the rate of 1 unit per turn but decelerate at the rate of 2 units per turn
 let ACCELERATION:float = 1
 let DECELERATION:float = -2
@@ -50,14 +50,12 @@ let MAX_RADAR_TURN_RATE:float = 45
 let MAX_FIRE_POWER:float = 3
 let MIN_FIRE_POWER:float = 0.1
 
-############ INTENT ############
-################################
+#++++++++ INTENT VARIABLES ++++++++#
 var intent_turnRate,intent_gunTurnRate,intent_radarTurnRate,intent_targetSpeed,intent_firepower:float
 var intent_adjustGunForBodyTurn,intent_adjustRadarForGunTurn,intent_adjustRadarForBodyTurn,intent_rescan,intent_fireAssist:bool
 var intent_bodyColor,intent_turretColor,intent_radarColor,intent_bulletColor,intent_scanColor,intent_tracksColor,intent_gunColor:string
 
-############ REMAININGS ############
-####################################
+#++++++++ REMAININGS ++++++++#
 var remaining_turnRate:float = 0
 var remaining_turnGunRate:float = 0
 var remaining_turnRadarRate:float = 0
@@ -236,6 +234,7 @@ method onConnectionError(bot:Bot, error:string) {.base.} = discard
 
 # this function is not 'physically' sending the intent, bit just setting the 'sendIntent' flag to true if is the right moment to do so
 proc go*() =
+  ## call `go()` to send the intent immediately
   sendIntent = true
   while sendIntent and runningState:
     sleep(1)
@@ -252,7 +251,7 @@ proc sendIntentLoop() {.async.} =
 
       lastTurnWeSentIntent = turnNumber
 
-      #reset the intent variables
+      # reset the intent variables
       intent_turnRate = 0
       intent_gunTurnRate = 0
       intent_radarTurnRate = 0
@@ -276,221 +275,326 @@ proc runAsync(bot:Bot) {.thread.} =
     go()
 
 proc setSecret*(bot:Bot, s:string) =
+  ## Use this function to override the default method to receive the secret
+  ## 
+  ## must be called before `start()`
   bot.secret = s
 
 proc setServerURL*(bot:Bot, url:string) =
+  ## Use this function to override the default method to receive the server URL
+  ## 
+  ## must be called before `start()`
   bot.serverConnectionURL = url
 
 # API callable procs
 proc isRunning*():bool =
+  ## returns true if the bot is alive
   return runningState
 
-
-
-############ BOT SETUP ############
-###################################
+#++++++++ BOT SETUP +++++++++#
 proc setAdjustGunForBodyTurn*(adjust:bool) =
+  ## this is permanent, no need to call this multiple times
+  ## 
+  ## use ``true`` if the gun should turn independent from the body
+  ## 
+  ## use ``false`` if the gun should turn with the body
   intent_adjustGunForBodyTurn = adjust
 
 proc setAdjustRadarForGunTurn*(adjust:bool) =
+  ## this is permanent, no need to call this multiple times
+  ## 
+  ## use ``true`` if the radar should turn independent from the gun
+  ## 
+  ## use ``false`` if the radar should turn with the gun
   intent_adjustRadarForGunTurn = adjust
 
 proc setAdjustRadarForBodyTurn*(adjust:bool) =
+  ## this is permanent, no need to call this multiple times
+  ## 
+  ## use ``true`` if the radar should turn independent from the body
+  ## 
+  ## use ``false`` if the radar should turn with the body
   intent_adjustRadarForBodyTurn = adjust
 
 proc isAdjustGunForBodyTurn*():bool =
+  ## returns true if the gun is turning independent from the body
   return intent_adjustGunForBodyTurn
 
 proc isAdjustRadarForGunTurn*():bool =
+  ## returns true if the radar is turning independent from the gun
   return intent_adjustRadarForGunTurn
 
 proc isAdjustRadarForBodyTurn*():bool =
+  ## returns true if the radar is turning independent from the body
   return intent_adjustRadarForBodyTurn
 
 
 
-############ COLORS ############
-################################
+#++++++++ COLORS +++++++++#
 proc setBodyColor*(color:string) =
+  ## set the body color, permanently
+  ## 
+  ## use hex colors, like ``#FF0000``
   intent_bodyColor = color
 
 proc setTurretColor*(color:string) =
+  ## set the turret color, permanently
+  ## 
+  ## use hex colors, like ``#FF0000``
   intent_turretColor = color
 
 proc setRadarColor*(color:string) =
+  ## set the radar color, permanently
+  ## 
+  ## use hex colors, like ``#FF0000``
   intent_radarColor = color
 
 proc setBulletColor*(color:string) =
+  ## set the bullet color, permanently
+  ## 
+  ## use hex colors, like ``#FF0000``
   intent_bulletColor = color
 
 proc setScanColor*(color:string) =
+  ## set the scan color, permanently
+  ## 
+  ## use hex colors, like ``#FF0000``
   intent_scanColor = color
 
 proc setTracksColor*(color:string) =
+  ## set the tracks color, permanently
+  ## 
+  ## use hex colors, like ``#FF0000``
   intent_tracksColor = color
 
 proc setGunColor*(color:string) =
+  ## set the gun color, permanently
+  ## 
+  ## use hex colors, like ``#FF0000``
   intent_gunColor = color
 
 proc getBodyColor*():string =
+  ## returns the body color
   return intent_bodyColor
 
 proc getTurretColor*():string =
+  ## returns the turret color
   return intent_turretColor
 
 proc getRadarColor*():string =
+  ## returns the radar color
   return intent_radarColor
 
 proc getBulletColor*():string =
+  ## returns the bullet color
   return intent_bulletColor
 
 proc getScanColor*():string =
+  ## returns the scan color
   return intent_scanColor
 
 proc getTracksColor*():string =
+  ## returns the tracks color
   return intent_tracksColor
 
 proc getGunColor*():string =
+  ## returns the gun color
   return intent_gunColor
 
 
-
-############ MISC GETTERS ############
-######################################
+#++++++++ MISC GETTERS +++++++++#
 proc getArenaHeight*():int =
+  ## returns the arena height (vertical)
   return gameSetup.arenaHeight
 
 proc getArenaWidth*():int =
+  ## returns the arena width (horizontal)
   return gameSetup.arenaWidth
 
 proc getTurnNumber*():int =
+  ## returns the current turn number
   return turnNumber
 
 
-
-############ TURNING RADAR ############
-#######################################
-proc setRadarTurnRate(degrees:float) =
+#++++++++ TURNING RADAR +++++++++#
+proc setRadarTurnRate*(degrees:float) =
+  ## set the radar turn rate if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   if not botLocked:
     remaining_turnRadarRate = degrees
 
 proc setTurnRadarLeft*(degrees:float) =
+  ## set the radar to turn left by `degrees` if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   if not botLocked:
     remaining_turnRadarRate = degrees
 
 proc setTurnRadarRight*(degrees:float) =
+  ## set the radar to turn right by `degrees` if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   setTurnRadarLeft(-degrees)
 
 proc turnRadarLeft*(degrees:float) =
-  # ask to turnRadar left for all degrees, the server will take care of turnRadaring the bot the max amount of degrees allowed
-  setTurnRadarLeft(degrees)
+  ## turn the radar left by `degrees` if the bot is not locked doing another blocking call
+  ## 
+  ## **BLOCKING CALL**
   
-  # lock the bot, no other actions must be done until the action is completed
-  botLocked = true
+  if not botLocked:
+    # ask to turnRadar left for all degrees, the server will take care of turnRadaring the bot the max amount of degrees allowed
+    setTurnRadarLeft(degrees)
+    
+    # lock the bot, no other actions must be done until the action is completed
+    botLocked = true
 
-  # go until the bot is not running or the remaining_turnRadarRate is 0
-  while runningState and remaining_turnRadarRate != 0: go()
+    # go until the bot is not running or the remaining_turnRadarRate is 0
+    while runningState and remaining_turnRadarRate != 0: go()
 
-  # unlock the bot
-  botLocked = false
+    # unlock the bot
+    botLocked = false
 
 proc turnRadarRight*(degrees:float) =
+  ## turn the radar right by `degrees` if the bot is not locked doing another blocking call
+  ## 
+  ## **BLOCKING CALL**
   turnRadarLeft(-degrees)
 
 proc getRadarTurnRemaining*():float =
+  ## returns the remaining radar turn rate in degrees
   return remaining_turnRadarRate
 
 proc getRadarDirection*():float =
+  ## returns the current radar direction in degrees
   return radarDirection
 
-proc getMaxRadarTurnRate*():float =
-  return MAX_RADAR_TURN_RATE
 
-
-
-############ TURNING GUN ############
-#####################################
+#++++++++ TURNING GUN +++++++++#
 proc setGunTurnRate*(degrees:float) =
+  ## set the gun turn rate if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   if not botLocked:
     remaining_turnGunRate = degrees
 
 proc setTurnGunLeft*(degrees:float) =
+  ## set the gun to turn left by `degrees` if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   if not botLocked:
     remaining_turnGunRate = degrees
 
 proc setTurnGunRight*(degrees:float) =
+  ## set the gun to turn right by `degrees` if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   setTurnGunLeft(-degrees)
 
 proc turnGunLeft*(degrees:float) =
+  ## turn the gun left by `degrees` if the bot is not locked doing another blocking call
+  ## 
+  ## **BLOCKING CALL**
+
   # ask to turnGun left for all degrees, the server will take care of turnGuning the bot the max amount of degrees allowed
-  setTurnGunLeft(degrees)
-  
-  # lock the bot, no other actions must be done until the action is completed
-  botLocked = true
+  if not botLocked:
+    setTurnGunLeft(degrees)
+    
+    # lock the bot, no other actions must be done until the action is completed
+    botLocked = true
 
-  # go until the bot is not running or the remaining_turnGunRate is 0
-  while runningState and remaining_turnGunRate != 0: go()
+    # go until the bot is not running or the remaining_turnGunRate is 0
+    while runningState and remaining_turnGunRate != 0: go()
 
-  # unlock the bot
-  botLocked = false
+    # unlock the bot
+    botLocked = false
 
 proc turnGunRight*(degrees:float) =
+  ## turn the gun right by `degrees` if the bot is not locked doing another blocking call
+  ## 
+  ## **BLOCKING CALL**
   turnGunLeft(-degrees)
 
 proc getGunTurnRemaining*():float =
+  ## returns the remaining gun turn rate in degrees
   return remaining_turnGunRate
 
 proc getGunDirection*():float =
+  ## returns the current gun direction in degrees
   return gunDirection
 
-proc getMAX_GUN_TURN_RATE*():float =
+proc getMaxGunTurnRate*():float =
   return MAX_GUN_TURN_RATE
 
 
-
-############ TURNING BODY ############
-######################################
+#++++++++ TURNING BODY +++++++#
 proc setTurnRate(degrees:float) =
+  ## set the body turn rate if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   if not botLocked:
     remaining_turnRate = degrees
 
 proc setTurnLeft*(degrees:float) =
+  ## set the body to turn left by `degrees` if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   if not botLocked:
     remaining_turnRate = degrees
 
 proc setTurnRight*(degrees:float) =
+  ## set the body to turn right by `degrees` if the bot is not locked doing a blocking call
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   setTurnLeft(-degrees)
 
 proc turnLeft*(degrees:float) =
-  # ask to turn left for all degrees, the server will take care of turning the bot the max amount of degrees allowed
-  setTurnLeft(degrees)
-  
-  # lock the bot, no other actions must be done until the action is completed
-  botLocked = true
+  ## turn the body left by `degrees` if the bot is not locked doing another blocking call
+  ## 
+  ## **BLOCKING CALL**
 
-  # go until the bot is not running or the remaining_turnRate is 0
-  while runningState and remaining_turnRate != 0: go()
+  if not botLocked:
+    # ask to turn left for all degrees, the server will take care of turning the bot the max amount of degrees allowed
+    setTurnLeft(degrees)
+    
+    # lock the bot, no other actions must be done until the action is completed
+    botLocked = true
 
-  # unlock the bot
-  botLocked = false
+    # go until the bot is not running or the remaining_turnRate is 0
+    while runningState and remaining_turnRate != 0: go()
+
+    # unlock the bot
+    botLocked = false
 
 proc turnRight*(degrees:float) =
+  ## turn the body right by `degrees` if the bot is not locked doing another blocking call
+  ## 
+  ## **BLOCKING CALL**
   turnLeft(-degrees)
 
 proc getTurnRemaining*():float =
+  ## returns the remaining body turn rate in degrees
   return remaining_turnRate
 
 proc getDirection*():float =
+  ## returns the current body direction in degrees
   return direction
 
-proc getMAX_TURN_RATE*():float =
+proc getMaxTurnRate*():float =
+  ## returns the maximum turn rate of the body in degrees
   return MAX_TURN_RATE
 
 
 
-############ MOVING ############
-################################
+#++++++++ MOVING +++++++++#
 proc setTargetSpeed*(speed:float) =
+  ## set the target speed of the bot if the bot is not locked doing a blocking call
+  ## 
+  ## `speed` can be any value between ``-current max speed`` and ``+current max speed``, any value outside this range will be clamped
+  ## 
+  ## by default ``max speed`` is ``8 pixels per turn``
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   if not botLocked:
     if speed > 0:
       intent_targetSpeed = min(speed, current_maxSpeed)
@@ -500,29 +604,52 @@ proc setTargetSpeed*(speed:float) =
       intent_targetSpeed = speed
 
 proc setForward*(distance:float) =
+  ## set the bot to move forward by `distance` if the bot is not locked doing a blocking call
+  ## 
+  ## `distance` is in pixels
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   if not botLocked:
     remaining_distance = distance
 
 proc setBack*(distance:float) =
+  ## set the bot to move back by `distance` if the bot is not locked doing a blocking call
+  ## 
+  ## `distance` is in pixels
+  ## 
+  ## **OVERRIDES CURRENT VALUE**
   setForward(-distance)
 
 proc forward*(distance:float) =
-  # ask to move forward for all pixels (distance), the server will take care of moving the bot the max amount of pixels allowed
-  setForward(distance)
-  
-  # lock the bot, no other actions must be done until the action is completed
-  botLocked = true
+  ## move the bot forward by `distance` if the bot is not locked doing another blocking call
+  ## 
+  ## `distance` is in pixels
+  ## 
+  ## **BLOCKING CALL**
 
-  # go until the bot is not running or the remaining_turnRate is 0
-  while runningState and remaining_distance != 0: go()
+  if not botLocked:
+    # ask to move forward for all pixels (distance), the server will take care of moving the bot the max amount of pixels allowed
+    setForward(distance)
+    
+    # lock the bot, no other actions must be done until the action is completed
+    botLocked = true
 
-  # unlock the bot
-  botLocked = false
+    # go until the bot is not running or the remaining_turnRate is 0
+    while runningState and remaining_distance != 0: go()
+
+    # unlock the bot
+    botLocked = false
 
 proc back*(distance:float) =
+  ## move the bot back by `distance` if the bot is not locked doing another blocking call
+  ## 
+  ## `distance` is in pixels
+  ## 
+  ## **BLOCKING CALL**
   forward(-distance)
 
 proc getDistanceRemaining*():float =
+  ## returns the remaining distance to move in pixels
   return remaining_distance
 
 
@@ -683,6 +810,23 @@ proc talkWithGS(bot:Bot, url:string) {.async.} =
     bot.onConnectionError(getCurrentExceptionMsg())
 
 proc newBot*(bot:Bot, json_file:string) =
+  ## **Create a new bot instance**
+  ## 
+  ## This method is used to create a new bot instance.
+  ## 
+  ## The bot instance is created with the data contained in the json file.
+  ## 
+  ## the passed Bot object must be a new `type ref object of Bot`. Example:
+  ## 
+  ## .. code-block:: nim 
+  ##  type
+  ##    MyBot = ref object of Bot
+  ##  var my_bot = MyBot()
+  ##  my_bot.newBot("my_bot.json")
+  ## 
+  ## To create a json file for your bot follow the `official Robocode TankRoyale documentation
+  ## <https://robocode-dev.github.io/tank-royale/tutorial/my-first-bot.html>`_.
+  
   let bot2 = readFile(joinPath(getAppDir(),json_file)).fromJson(bot.type)
   bot.name = bot2.name
   bot.version = bot2.version
@@ -698,6 +842,18 @@ proc newBot*(bot:Bot, json_file:string) =
   intent_fireAssist = false
 
 proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosition(x:0,y:0,angle:0)) =
+  ## **Start the bot**
+  ## 
+  ## This method is used to start the bot instance. This coincide with asking the bot to connect to the game server
+  ## 
+  ## `bot` is your bot istance that you created with the `newBot` procedure.
+  ## 
+  ## `connect` (can be omitted) is a boolean value that if `true` (default) will ask the bot to connect to the game server.
+  ## If `false` the bot will not connect to the game server. Mostly used for testing.
+  ## 
+  ## `position` (can be omitted) is the initial position of the bot. If not specified the bot will be placed at the center of the map.
+  ## This custom position will work if the server is configured to use the custom initial positions.
+  
   initialPosition = position
 
   # connect to the Game Server

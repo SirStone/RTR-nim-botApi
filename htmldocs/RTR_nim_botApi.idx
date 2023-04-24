@@ -1,0 +1,57 @@
+go	RTR_nim_botApi.html#go	RTR_nim_botApi: go()	
+setSecret	RTR_nim_botApi.html#setSecret,Bot,string	RTR_nim_botApi: setSecret(bot: Bot; s: string)	
+setServerURL	RTR_nim_botApi.html#setServerURL,Bot,string	RTR_nim_botApi: setServerURL(bot: Bot; url: string)	
+isRunning	RTR_nim_botApi.html#isRunning	RTR_nim_botApi: isRunning(): bool	
+setAdjustGunForBodyTurn	RTR_nim_botApi.html#setAdjustGunForBodyTurn,bool	RTR_nim_botApi: setAdjustGunForBodyTurn(adjust: bool)	
+setAdjustRadarForGunTurn	RTR_nim_botApi.html#setAdjustRadarForGunTurn,bool	RTR_nim_botApi: setAdjustRadarForGunTurn(adjust: bool)	
+setAdjustRadarForBodyTurn	RTR_nim_botApi.html#setAdjustRadarForBodyTurn,bool	RTR_nim_botApi: setAdjustRadarForBodyTurn(adjust: bool)	
+isAdjustGunForBodyTurn	RTR_nim_botApi.html#isAdjustGunForBodyTurn	RTR_nim_botApi: isAdjustGunForBodyTurn(): bool	
+isAdjustRadarForGunTurn	RTR_nim_botApi.html#isAdjustRadarForGunTurn	RTR_nim_botApi: isAdjustRadarForGunTurn(): bool	
+isAdjustRadarForBodyTurn	RTR_nim_botApi.html#isAdjustRadarForBodyTurn	RTR_nim_botApi: isAdjustRadarForBodyTurn(): bool	
+setBodyColor	RTR_nim_botApi.html#setBodyColor,string	RTR_nim_botApi: setBodyColor(color: string)	
+setTurretColor	RTR_nim_botApi.html#setTurretColor,string	RTR_nim_botApi: setTurretColor(color: string)	
+setRadarColor	RTR_nim_botApi.html#setRadarColor,string	RTR_nim_botApi: setRadarColor(color: string)	
+setBulletColor	RTR_nim_botApi.html#setBulletColor,string	RTR_nim_botApi: setBulletColor(color: string)	
+setScanColor	RTR_nim_botApi.html#setScanColor,string	RTR_nim_botApi: setScanColor(color: string)	
+setTracksColor	RTR_nim_botApi.html#setTracksColor,string	RTR_nim_botApi: setTracksColor(color: string)	
+setGunColor	RTR_nim_botApi.html#setGunColor,string	RTR_nim_botApi: setGunColor(color: string)	
+getBodyColor	RTR_nim_botApi.html#getBodyColor	RTR_nim_botApi: getBodyColor(): string	
+getTurretColor	RTR_nim_botApi.html#getTurretColor	RTR_nim_botApi: getTurretColor(): string	
+getRadarColor	RTR_nim_botApi.html#getRadarColor	RTR_nim_botApi: getRadarColor(): string	
+getBulletColor	RTR_nim_botApi.html#getBulletColor	RTR_nim_botApi: getBulletColor(): string	
+getScanColor	RTR_nim_botApi.html#getScanColor	RTR_nim_botApi: getScanColor(): string	
+getTracksColor	RTR_nim_botApi.html#getTracksColor	RTR_nim_botApi: getTracksColor(): string	
+getGunColor	RTR_nim_botApi.html#getGunColor	RTR_nim_botApi: getGunColor(): string	
+getArenaHeight	RTR_nim_botApi.html#getArenaHeight	RTR_nim_botApi: getArenaHeight(): int	
+getArenaWidth	RTR_nim_botApi.html#getArenaWidth	RTR_nim_botApi: getArenaWidth(): int	
+getTurnNumber	RTR_nim_botApi.html#getTurnNumber	RTR_nim_botApi: getTurnNumber(): int	
+setRadarTurnRate	RTR_nim_botApi.html#setRadarTurnRate,float	RTR_nim_botApi: setRadarTurnRate(degrees: float)	
+setTurnRadarLeft	RTR_nim_botApi.html#setTurnRadarLeft,float	RTR_nim_botApi: setTurnRadarLeft(degrees: float)	
+setTurnRadarRight	RTR_nim_botApi.html#setTurnRadarRight,float	RTR_nim_botApi: setTurnRadarRight(degrees: float)	
+turnRadarLeft	RTR_nim_botApi.html#turnRadarLeft,float	RTR_nim_botApi: turnRadarLeft(degrees: float)	
+turnRadarRight	RTR_nim_botApi.html#turnRadarRight,float	RTR_nim_botApi: turnRadarRight(degrees: float)	
+getRadarTurnRemaining	RTR_nim_botApi.html#getRadarTurnRemaining	RTR_nim_botApi: getRadarTurnRemaining(): float	
+getRadarDirection	RTR_nim_botApi.html#getRadarDirection	RTR_nim_botApi: getRadarDirection(): float	
+setGunTurnRate	RTR_nim_botApi.html#setGunTurnRate,float	RTR_nim_botApi: setGunTurnRate(degrees: float)	
+setTurnGunLeft	RTR_nim_botApi.html#setTurnGunLeft,float	RTR_nim_botApi: setTurnGunLeft(degrees: float)	
+setTurnGunRight	RTR_nim_botApi.html#setTurnGunRight,float	RTR_nim_botApi: setTurnGunRight(degrees: float)	
+turnGunLeft	RTR_nim_botApi.html#turnGunLeft,float	RTR_nim_botApi: turnGunLeft(degrees: float)	
+turnGunRight	RTR_nim_botApi.html#turnGunRight,float	RTR_nim_botApi: turnGunRight(degrees: float)	
+getGunTurnRemaining	RTR_nim_botApi.html#getGunTurnRemaining	RTR_nim_botApi: getGunTurnRemaining(): float	
+getGunDirection	RTR_nim_botApi.html#getGunDirection	RTR_nim_botApi: getGunDirection(): float	
+getMaxGunTurnRate	RTR_nim_botApi.html#getMaxGunTurnRate	RTR_nim_botApi: getMaxGunTurnRate(): float	
+setTurnLeft	RTR_nim_botApi.html#setTurnLeft,float	RTR_nim_botApi: setTurnLeft(degrees: float)	
+setTurnRight	RTR_nim_botApi.html#setTurnRight,float	RTR_nim_botApi: setTurnRight(degrees: float)	
+turnLeft	RTR_nim_botApi.html#turnLeft,float	RTR_nim_botApi: turnLeft(degrees: float)	
+turnRight	RTR_nim_botApi.html#turnRight,float	RTR_nim_botApi: turnRight(degrees: float)	
+getTurnRemaining	RTR_nim_botApi.html#getTurnRemaining	RTR_nim_botApi: getTurnRemaining(): float	
+getDirection	RTR_nim_botApi.html#getDirection	RTR_nim_botApi: getDirection(): float	
+getMaxTurnRate	RTR_nim_botApi.html#getMaxTurnRate	RTR_nim_botApi: getMaxTurnRate(): float	
+setTargetSpeed	RTR_nim_botApi.html#setTargetSpeed,float	RTR_nim_botApi: setTargetSpeed(speed: float)	
+setForward	RTR_nim_botApi.html#setForward,float	RTR_nim_botApi: setForward(distance: float)	
+setBack	RTR_nim_botApi.html#setBack,float	RTR_nim_botApi: setBack(distance: float)	
+forward	RTR_nim_botApi.html#forward,float	RTR_nim_botApi: forward(distance: float)	
+back	RTR_nim_botApi.html#back,float	RTR_nim_botApi: back(distance: float)	
+getDistanceRemaining	RTR_nim_botApi.html#getDistanceRemaining	RTR_nim_botApi: getDistanceRemaining(): float	
+newBot	RTR_nim_botApi.html#newBot,Bot,string	RTR_nim_botApi: newBot(bot: Bot; json_file: string)	
+start	RTR_nim_botApi.html#start,Bot,bool,InitialPosition	RTR_nim_botApi: start(bot: Bot; connect: bool = true;\n      position: InitialPosition = InitialPosition(x: 0, y: 0, angle: 0))	

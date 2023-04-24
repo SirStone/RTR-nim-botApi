@@ -46,6 +46,22 @@
             "problemMatcher": [],
             "group": {
                 "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "build docs",
+            "type": "shell",
+            "command": "nim",
+            "options":{
+                "cwd": "${workspaceFolder}"
+            },
+            "args": [
+                "doc","--project","--index:on","--outdir:htmldocs","--git.url:https://github.com/SirStone/RTR-nim-botApi","--git.commit:master","--git.devel:master", "--outdir:htmldocs", "RTR_nim_botApi/src/RTR_nim_botApi.nim"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
                 "isDefault": true
             }
         }
