@@ -114,7 +114,7 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [ ] getVersion() _#Game version, e.g. "1.0.0"._
 - [ ] getX() _#Current X coordinate of the center of the bot._
 - [ ] getY() _#Current Y coordinate of the center of the bot._
-- [ ] go() _#Commits the current commands (actions), which finalizes the current turn for the bot._
+- [x] go() _#Commits the current commands (actions), which finalizes the current turn for the bot._
 - [ ] gunBearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the bot's gun and the direction to the point x,y._
 - [x] isAdjustGunForBodyTurn() _#Checks if the gun is set to adjust for the bot turning, i.e. to turn independent of the bot's body turn._
 - [x] isAdjustRadarForBodyTurn() _#Checks if the radar is set to adjust for the body turning, i.e. to turn independent of the body's turn._
