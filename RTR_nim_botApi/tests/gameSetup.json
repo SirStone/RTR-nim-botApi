@@ -8,7 +8,7 @@
     "isMinNumberOfParticipantsLocked":true,
     "maxNumberOfParticipants":100,
     "isMaxNumberOfParticipantsLocked":true,
-    "numberOfRounds":2,
+    "numberOfRounds":1,
     "isNumberOfRoundsLocked":false,
     "gunCoolingRate":0.1,
     "isGunCoolingRateLocked":false,

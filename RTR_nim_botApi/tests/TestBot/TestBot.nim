@@ -67,6 +67,10 @@ method run(bot:TestBot) =
         turnRadarLeft(test.value)
       of "turnRadarRight":
         turnRadarRight(test.value)
+      of "forward":
+        forward(test.value)
+      of "back":
+        back(test.value)
       
       echo "[TestBot] ",test.action," done ",test.value, " at turn ",getTurnNumber()
       test_index = test_index + 1

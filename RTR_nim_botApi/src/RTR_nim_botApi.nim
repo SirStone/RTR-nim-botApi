@@ -1,5 +1,5 @@
 # standard libraries
-import std/[os, strutils, threadpool]
+import std/[os, strutils, threadpool, math]
 
 # 3rd party libraries
 import asyncdispatch, ws, jsony, json
@@ -15,6 +15,7 @@ var lastTurnWeSentIntent:int = -1
 var sendIntent:bool = false
 var gs_ws:WebSocket
 var botLocked:bool = false
+var isOverDriving:bool = false
 
 ## GAME VARAIBLES
 # game setup
@@ -26,51 +27,195 @@ var turnNumber*,roundNumber:int
 var energy,x,y,direction,gunDirection,radarDirection,radarSweep,speed,turnRate,gunTurnRate,radarTurnRate,gunHeat:float
 var initialPosition:InitialPosition = InitialPosition(x:0, y:0, angle:0)
 
-# game physics
-let maxSpeed:float = 8
-let maxTurnRate:float = 10
-let maxGunTurnRate:float = 20
-let maxRadarTurnRate:float = 45
-let maxFirePower:float = 3
-let minFirePower:float = 0.1
+############ GAME PHYSICS ############
+######################################
+# bots accelerate at the rate of 1 unit per turn but decelerate at the rate of 2 units per turn
+let ACCELERATION:float = 1
+let DECELERATION:float = -2
 
-# intent
+# The speed can never exceed 8 units per turn
+let MAX_SPEED:float = 8
+var current_maxSpeed:float = MAX_SPEED
+
+# If standing still (0 units/turn), the maximum rate is 10° per turn
+let MAX_TURN_RATE:float = 10
+
+# The maximum rate of rotation is 20° per turn. This is added to the current rate of rotation of the bot
+let MAX_GUN_TURN_RATE:float = 20
+
+# The maximum rate of rotation is 45° per turn. This is added to the current rate of rotation of the gun
+let MAX_RADAR_TURN_RATE:float = 45
+
+# The maximum firepower is 3 and the minimum firepower is 0.1
+let MAX_FIRE_POWER:float = 3
+let MIN_FIRE_POWER:float = 0.1
+
+############ INTENT ############
+################################
 var intent_turnRate,intent_gunTurnRate,intent_radarTurnRate,intent_targetSpeed,intent_firepower:float
 var intent_adjustGunForBodyTurn,intent_adjustRadarForGunTurn,intent_adjustRadarForBodyTurn,intent_rescan,intent_fireAssist:bool
 var intent_bodyColor,intent_turretColor,intent_radarColor,intent_bulletColor,intent_scanColor,intent_tracksColor,intent_gunColor:string
 
-# remainings
+############ REMAININGS ############
+####################################
 var remaining_turnRate:float = 0
 var remaining_turnGunRate:float = 0
 var remaining_turnRadarRate:float = 0
+var remaining_distance:float = 0
+
+# # proc calcNewSpeed(currentSpeed:float, targetSpeed:float):float =
+# #   if currentSpeed < targetSpeed:
+# #     # I'm accelerating
+# #     return min(currentSpeed + ACCELERATION, current_maxSpeed)
+# #   else:
+# #     # I'm decelerating
+# #     return max(currentSpeed - DECELERATION, -current_maxSpeed)
+
+# #   # in case are equal, return currentSpeed
+# #   return MAX_SPEEDpeed
+
+# func isNearZero(value:float):bool =
+#   return value.abs < 0.00001
+
+# # 1/3
+# # Credits for this algorithm goes to Patrick Cupka (aka Voidious),
+# # Julian Kent (aka Skilgannon), and Positive for the original version:
+# # https://robowiki.net/wiki/User:Voidious/Optimal_Velocity#Hijack_2
+# proc getMaxDeceleration(speed:float):float =
+#   let decelerationTime = speed / DECELERATION
+#   let accelerationTime = 1.0 - decelerationTime
+
+#   return min(1, decelerationTime) * DECELERATION + max(0, accelerationTime) * ACCELERATION
+
+# # 2/3
+# # Credits for thMAX_SPEEDithm goes to Patrick Cupka (aka Voidious),
+# # Julian Kent (aka Skilgannon), and Positive for the original version:
+# # https://robowiki.net/wiki/User:Voidious/Optimal_Velocity#Hijack_2
+# proc getMaxSpeed(distance:float):float =
+#   let decelerationTime = max(1, ceil((sqrt((4.0 * 2.0 / DECELERATION) * distance + 1.0) - 1.0) / 2.0))
+#   if decelerationTime == Inf: return current_maxSpeed
+
+#   let decelerationDistance = (decelerationTime / 2.0) * (decelerationTime - 1.0) * DECELERATION
+#   return ((decelerationTime - 1.0) * DECELERATION) + ((distance - decelerationDistance) / decelerationTime)
+
+# # Credits fMAX_SPEEDalgorithm goes to Patrick Cupka (aka Voidious),
+# # Julian Kent (aka Skilgannon), and Positive for the original version:
+# # https://robowiki.net/wiki/User:Voidious/Optimal_Velocity#Hijack_2
+# proc getNewTargetSpeed(spped:float, distance:float):float =
+#   if distance < 0:
+#     return -getNewTargetSpeed(-speed, -distance)
+
+#   let targetSpeed = if distance == Inf:
+#     current_maxSpeed
+#   else:
+#     min(getMaxSpeed(distance), current_maxSpeed)
+
+#   return if speed >= 0:
+#     clamp(targetSpeed, speed - DECELERATION .. speed + ACCELERATION)
+#   else:
+#     clamp(targetSpeed, speed - ACCELERATION .. speed + getMaxDeceleration(-speed))
+
+# proc getDistanceTraveledUntilStop(speed:float):float =
+#   var absSpeed = speed.abs
+#   var distance = 0.0
+#   while absSpeed > 0: 
+#     absSpeed = getNewTargetSpeed(absSpeed, 0)
+#     distance = distance + absSpeed
+#   return distance
+
+# proc getAndSetNewTargetSpeed(distance:float):float =
+#   # calculate the new speed
+#   let speed = getNewTargetSpeed(speed, distance)
+
+#   # set the new speed
+#   intent_targetSpeed = speed
+
+#   # return the new speed
+#   return speed
+
+# proc updateMovement() =
+#   var distance = remaining_distance
+
+#   # This is Nat Pavasant's method described here:
+#   # https://robowiki.net/wiki/User:Positive/Optimal_Velocity#Nat.27s_updateMovement
+#   var newSpeed = getAndSetNewTargetSpeed(distance)
+
+#   # If we are over-driving our distance and we are now at velocity=0 then we stopped
+#   if isNearZero(newSpeed) and isOverDriving:
+#     remaining_distance = 0
+#     distance = 0
+#     isOverDriving = false
+
+#   # the overdrive flag
+#   if sgn(distance * newSpeed) != -1:
+#     isOverDriving = getDistanceTraveledUntilStop(newSpeed) > distance
+
+#   # update the remaining distance
+#   echo "Remaining distance: ", remaining_distance
+#   remaining_distance = remaining_distance - newSpeed
 
 proc updateRemainings() =
   # body turn
   if remaining_turnRate != 0:
     if remaining_turnRate > 0:
-      intent_turnRate = min(remaining_turnRate, maxTurnRate)
-      remaining_turnRate = max(0, remaining_turnRate - maxTurnRate)
+      intent_turnRate = min(remaining_turnRate, MAX_TURN_RATE)
+      remaining_turnRate = max(0, remaining_turnRate - MAX_TURN_RATE)
     else:
-      intent_turnRate = max(remaining_turnRate, -maxTurnRate)
-      remaining_turnRate = min(0, remaining_turnRate + maxTurnRate)
+      intent_turnRate = max(remaining_turnRate, -MAX_TURN_RATE)
+      remaining_turnRate = min(0, remaining_turnRate + MAX_TURN_RATE)
 
   # gun turn
   if remaining_turnGunRate != 0:
     if remaining_turnGunRate > 0:
-      intent_gunTurnRate = min(remaining_turnGunRate, maxGunTurnRate)
-      remaining_turnGunRate = max(0, remaining_turnGunRate - maxGunTurnRate)
+      intent_gunTurnRate = min(remaining_turnGunRate, MAX_GUN_TURN_RATE)
+      remaining_turnGunRate = max(0, remaining_turnGunRate - MAX_GUN_TURN_RATE)
     else:
-      intent_gunTurnRate = max(remaining_turnGunRate, -maxGunTurnRate)
-      remaining_turnGunRate = min(0, remaining_turnGunRate + maxGunTurnRate)
+      intent_gunTurnRate = max(remaining_turnGunRate, -MAX_GUN_TURN_RATE)
+      remaining_turnGunRate = min(0, remaining_turnGunRate + MAX_GUN_TURN_RATE)
 
   # radar turn
   if remaining_turnRadarRate != 0:
     if remaining_turnRadarRate > 0:
-      intent_radarTurnRate = min(remaining_turnRadarRate, maxRadarTurnRate)
-      remaining_turnRadarRate = max(0, remaining_turnRadarRate - maxRadarTurnRate)
+      intent_radarTurnRate = min(remaining_turnRadarRate, MAX_RADAR_TURN_RATE)
+      remaining_turnRadarRate = max(0, remaining_turnRadarRate - MAX_RADAR_TURN_RATE)
     else:
-      intent_radarTurnRate = max(remaining_turnRadarRate, -maxRadarTurnRate)
-      remaining_turnRadarRate = min(0, remaining_turnRadarRate + maxRadarTurnRate)
+      intent_radarTurnRate = max(remaining_turnRadarRate, -MAX_RADAR_TURN_RATE)
+      remaining_turnRadarRate = min(0, remaining_turnRadarRate + MAX_RADAR_TURN_RATE)
+
+  # target speed calculation
+  if remaining_distance != 0:
+    # how much turns requires to stop from the current speed? t = (V_target - V_current)/ -acceleration
+    let turnsRequiredToStop = -speed.abs / DECELERATION
+    let remaining_distance_breaking = speed.abs * turnsRequiredToStop + 0.5 * DECELERATION * turnsRequiredToStop.pow(2)
+    if remaining_distance > 0: # going forward
+      # echo "[API] Turns required to stop: ", turnsRequiredToStop, " my speed: ", speed, " remaining distance: ", remaining_distance, " remaining distance breaking: ", remaining_distance_breaking
+
+      # if the distance left is less or equal than the turns required to stop, then we need to slow down
+      if remaining_distance - remaining_distance_breaking < speed:
+        intent_targetSpeed = max(0, speed+DECELERATION)
+        remaining_distance = remaining_distance - intent_targetSpeed # what we left for stopping
+      else: # if the distance left is more than the turns required to stop, then we need to speed up to max speed
+        # if the current_maxSpeed changes over time this will work for adjusting to the new velocity too
+        intent_targetSpeed = min(current_maxSpeed, speed+ACCELERATION)
+        remaining_distance = remaining_distance - intent_targetSpeed 
+    else: # going backward
+      # echo "[API] Turns required to stop: ", turnsRequiredToStop, " my speed: ", speed, " remaining distance: ", remaining_distance, " remaining distance breaking: ", remaining_distance_breaking
+
+      # if the distance left is less or equal than the turns required to stop, then we need to slow down
+      if remaining_distance.abs - remaining_distance_breaking < speed.abs:
+        intent_targetSpeed = min(0, speed-DECELERATION)
+        remaining_distance = remaining_distance - intent_targetSpeed # what we left for stopping
+      else: # if the distance left is more than the turns required to stop, then we need to speed up to max speed
+        # if the current_maxSpeed changes over time this will work for adjusting to the new velocity too
+        intent_targetSpeed = max(-current_maxSpeed, speed-ACCELERATION)
+        remaining_distance = remaining_distance - intent_targetSpeed
+
+      
+    # updateMovement()
+
+    
+
+    
 
 # the following section contains all the methods that are supposed to be overrided by the bot creator
 method run(bot:Bot) {.base.} = discard
@@ -101,6 +246,7 @@ proc sendIntentLoop() {.async.} =
     if sendIntent and lastTurnWeSentIntent < turnNumber:
       updateRemainings()
 
+      # if remaining_distance != 0: echo "[API] intent_targetSpeed: " & $intent_targetSpeed
       let intent = BotIntent(`type`: Type.botIntent, turnRate:intent_turnRate, gunTurnRate:intent_gunTurnRate, radarTurnRate:intent_radarTurnRate, targetSpeed:intent_targetSpeed, firePower:intent_firePower, adjustGunForBodyTurn:intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:intent_adjustRadarForGunTurn, rescan:intent_rescan, fireAssist:intent_fireAssist, bodyColor:intent_bodyColor, turretColor:intent_turretColor, radarColor:intent_radarColor, bulletColor:intent_bulletColor, scanColor:intent_scanColor, tracksColor:intent_tracksColor, gunColor:intent_gunColor)
       await gs_ws.send(intent.toJson)
 
@@ -139,7 +285,10 @@ proc setServerURL*(bot:Bot, url:string) =
 proc isRunning*():bool =
   return runningState
 
+
+
 ############ BOT SETUP ############
+###################################
 proc setAdjustGunForBodyTurn*(adjust:bool) =
   intent_adjustGunForBodyTurn = adjust
 
@@ -158,7 +307,10 @@ proc isAdjustRadarForGunTurn*():bool =
 proc isAdjustRadarForBodyTurn*():bool =
   return intent_adjustRadarForBodyTurn
 
+
+
 ############ COLORS ############
+################################
 proc setBodyColor*(color:string) =
   intent_bodyColor = color
 
@@ -201,7 +353,10 @@ proc getTracksColor*():string =
 proc getGunColor*():string =
   return intent_gunColor
 
+
+
 ############ MISC GETTERS ############
+######################################
 proc getArenaHeight*():int =
   return gameSetup.arenaHeight
 
@@ -211,10 +366,14 @@ proc getArenaWidth*():int =
 proc getTurnNumber*():int =
   return turnNumber
 
-proc getTurnRemaining*():float =
-  return remaining_turnRate
+
 
 ############ TURNING RADAR ############
+#######################################
+proc setRadarTurnRate(degrees:float) =
+  if not botLocked:
+    remaining_turnRadarRate = degrees
+
 proc setTurnRadarLeft*(degrees:float) =
   if not botLocked:
     remaining_turnRadarRate = degrees
@@ -238,16 +397,23 @@ proc turnRadarLeft*(degrees:float) =
 proc turnRadarRight*(degrees:float) =
   turnRadarLeft(-degrees)
 
-proc getRadarTurnRate*():float =
+proc getRadarTurnRemaining*():float =
   return remaining_turnRadarRate
 
 proc getRadarDirection*():float =
   return radarDirection
 
 proc getMaxRadarTurnRate*():float =
-  return maxRadarTurnRate
+  return MAX_RADAR_TURN_RATE
+
+
 
 ############ TURNING GUN ############
+#####################################
+proc setGunTurnRate*(degrees:float) =
+  if not botLocked:
+    remaining_turnGunRate = degrees
+
 proc setTurnGunLeft*(degrees:float) =
   if not botLocked:
     remaining_turnGunRate = degrees
@@ -271,16 +437,23 @@ proc turnGunLeft*(degrees:float) =
 proc turnGunRight*(degrees:float) =
   turnGunLeft(-degrees)
 
-proc getGunTurnRate*():float =
+proc getGunTurnRemaining*():float =
   return remaining_turnGunRate
 
 proc getGunDirection*():float =
   return gunDirection
 
-proc getMaxGunTurnRate*():float =
-  return maxGunTurnRate
+proc getMAX_GUN_TURN_RATE*():float =
+  return MAX_GUN_TURN_RATE
+
+
 
 ############ TURNING BODY ############
+######################################
+proc setTurnRate(degrees:float) =
+  if not botLocked:
+    remaining_turnRate = degrees
+
 proc setTurnLeft*(degrees:float) =
   if not botLocked:
     remaining_turnRate = degrees
@@ -304,17 +477,55 @@ proc turnLeft*(degrees:float) =
 proc turnRight*(degrees:float) =
   turnLeft(-degrees)
 
-proc getTurnRate*():float =
+proc getTurnRemaining*():float =
   return remaining_turnRate
 
 proc getDirection*():float =
   return direction
 
-proc getMaxTurnRate*():float =
-  return maxTurnRate
+proc getMAX_TURN_RATE*():float =
+  return MAX_TURN_RATE
+
+
 
 ############ MOVING ############
-proc forward*(degrees:float) = discard #TODO
+################################
+proc setTargetSpeed*(speed:float) =
+  if not botLocked:
+    if speed > 0:
+      intent_targetSpeed = min(speed, current_maxSpeed)
+    elif speed < 0:
+      intent_targetSpeed = max(speed, -current_maxSpeed)
+    else:
+      intent_targetSpeed = speed
+
+proc setForward*(distance:float) =
+  if not botLocked:
+    remaining_distance = distance
+
+proc setBack*(distance:float) =
+  setForward(-distance)
+
+proc forward*(distance:float) =
+  # ask to move forward for all pixels (distance), the server will take care of moving the bot the max amount of pixels allowed
+  setForward(distance)
+  
+  # lock the bot, no other actions must be done until the action is completed
+  botLocked = true
+
+  # go until the bot is not running or the remaining_turnRate is 0
+  while runningState and remaining_distance != 0: go()
+
+  # unlock the bot
+  botLocked = false
+
+proc back*(distance:float) =
+  forward(-distance)
+
+proc getDistanceRemaining*():float =
+  return remaining_distance
+
+
 
 proc stopBot() = 
   echo "[API] Stopping bot"

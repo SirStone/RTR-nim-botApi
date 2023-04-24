@@ -94,7 +94,7 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [ ] getMaxInactivityTurns() _#The maximum number of inactive turns allowed the bot will become zapped by the game for being inactive._
 - [x] getMaxRadarTurnRate() _#Returns the maximum radar turn rate in degrees per turn._
 - [ ] getMaxSpeed() _#Returns the maximum speed in units per turn._
-- [ ] getMaxTurnRate() _#Returns the maximum turn rate of the bot in degrees per turn._
+- [x] getMaxTurnRate() _#Returns the maximum turn rate of the bot in degrees per turn._
 - [ ] getMyId() _#Unique id of this bot, which is available when the game has started._
 - [ ] getNumberOfRounds() _#The number of rounds in a battle._
 - [x] getRadarColor() _#Returns the color of the radar._
@@ -155,14 +155,14 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [ ] setFire​(double firepower) _#Sets the gun to fire in the direction that the gun is pointing with the specified firepower._
 - [ ] setFireAssist​(boolean enable) _#Enables or disables fire assistance explicitly._
 - [x] setGunColor​(Color color) _#Sets the color of the gun._
-- [ ] setGunTurnRate​(double gunTurnRate) _#Sets the turn rate of the gun, which can be positive and negative._
+- [x] setGunTurnRate​(double gunTurnRate) _#Sets the turn rate of the gun, which can be positive and negative._
 - [ ] setInterruptible​(boolean interruptible) _#Call this method during an event handler to control continuing or restarting the event handler, when a new event occurs again for the same event handler while processing an earlier event._
 - [ ] setMaxGunTurnRate​(double maxGunTurnRate) _#Sets the maximum turn rate which applies to turn the gun to the left or right._
 - [ ] setMaxRadarTurnRate​(double maxRadarTurnRate) _#Sets the maximum turn rate which applies to turn the radar to the left or right._
 - [ ] setMaxSpeed​(double maxSpeed) _#Sets the maximum speed which applies when moving forward and backward._
 - [ ] setMaxTurnRate​(double maxTurnRate) _#Sets the maximum turn rate which applies to turn the bot to the left or right._
 - [x] setRadarColor​(Color color) _#Sets the color of the radar._
-- [ ] setRadarTurnRate​(double gunRadarTurnRate) _#Sets the turn rate of the radar, which can be positive and negative._
+- [x] setRadarTurnRate​(double gunRadarTurnRate) _#Sets the turn rate of the radar, which can be positive and negative._
 - [ ] setRescan() _#Sets the bot to rescan with the radar._
 - [ ] setResume() _#Sets the bot to scan (again) with the radar._
 - [x] setScanColor​(Color color) _#Sets the color of the scan arc._
@@ -174,34 +174,34 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [x] start() _#The method used to start running the bot._
 
 ### IBot methods to implement
-- [ ] back​(double distance) _#Moves the bot backward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
+- [x] back​(double distance) _#Moves the bot backward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
 - [ ] fire​(double firepower) _#Fire the gun in the direction as the gun is pointing._
-- [ ] forward​(double distance) _#Moves the bot forward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
-- [ ] getDistanceRemaining() _#Returns the distance remaining till the bot has finished moving after having called IBot.setForward(double), IBot.setBack(double), IBot.forward(double), or IBot.back(double)._
-- [ ] getGunTurnRemaining() _#Returns the remaining turn in degrees till the gun has finished turning after having called IBot.setTurnGunLeft(double), IBot.setTurnGunRight(double), IBot.turnGunLeft(double), or IBot.turnGunRight(double)._
-- [ ] getRadarTurnRemaining() _#Returns the remaining turn in degrees till the radar has finished turning after having called IBot.setTurnRadarLeft(double), IBot.setTurnRadarRight(double), IBot.turnRadarLeft(double), or IBot.turnRadarRight(double)._
-- [ ] getTurnRemaining() _#Returns the remaining turn in degrees till the bot has finished turning after having called IBot.setTurnLeft(double), IBot.setTurnRight(double), IBot.turnLeft(double), or IBot.turnRight(double)._
+- [x] forward​(double distance) _#Moves the bot forward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
+- [x] getDistanceRemaining() _#Returns the distance remaining till the bot has finished moving after having called IBot.setForward(double), IBot.setBack(double), IBot.forward(double), or IBot.back(double)._
+- [X] getGunTurnRemaining() _#Returns the remaining turn in degrees till the gun has finished turning after having called IBot.setTurnGunLeft(double), IBot.setTurnGunRight(double), IBot.turnGunLeft(double), or IBot.turnGunRight(double)._
+- [X] getRadarTurnRemaining() _#Returns the remaining turn in degrees till the radar has finished turning after having called IBot.setTurnRadarLeft(double), IBot.setTurnRadarRight(double), IBot.turnRadarLeft(double), or IBot.turnRadarRight(double)._
+- [X] getTurnRemaining() _#Returns the remaining turn in degrees till the bot has finished turning after having called IBot.setTurnLeft(double), IBot.setTurnRight(double), IBot.turnLeft(double), or IBot.turnRight(double)._
 - [x] isRunning() _#Checks if this bot is running._
 - [ ] rescan() 	_#Scan (again) with the radar._
 - [ ] resume() 	_#Resume the movement prior to calling the IBaseBot.setStop() or IBot.stop() method._
-- [ ] setBack​(double distance) _#Set the bot to move backward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
-- [ ] setForward​(double distance) _#Set the bot to move forward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
-- [ ] setGunTurnRate​(double turnRate) _#Sets the turn rate of the gun, which can be positive and negative._
-- [ ] setRadarTurnRate​(double turnRate) _#Sets the turn rate of the radar, which can be positive and negative._
+- [x] setBack​(double distance) _#Set the bot to move backward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
+- [x] setForward​(double distance) _#Set the bot to move forward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
+- [x] setGunTurnRate​(double turnRate) _#Sets the turn rate of the gun, which can be positive and negative._
+- [x] setRadarTurnRate​(double turnRate) _#Sets the turn rate of the radar, which can be positive and negative._
 - [ ] setTargetSpeed​(double targetSpeed) _#Sets the new target speed for the bot in units per turn._
-- [ ] setTurnGunLeft​(double degrees) _#Set the gun to turn to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] setTurnGunRight​(double degrees) _#Set the gun to turn to the right (following the decreasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] setTurnLeft​(double degrees)	_#Set the bot to turn to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] setTurnRadarLeft​(double degrees) _#Set the radar to turn to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] setTurnRadarRight​(double degrees) _#Set the radar to turn to the right (following the decreasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] setTurnRate​(double turnRate) _#Sets the turn rate of the bot, which can be positive and negative._
-- [ ] setTurnRight​(double degrees) _#Set the bot to turn to the right (following the decreasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] setTurnGunLeft​(double degrees) _#Set the gun to turn to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] setTurnGunRight​(double degrees) _#Set the gun to turn to the right (following the decreasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] setTurnLeft​(double degrees)	_#Set the bot to turn to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] setTurnRadarLeft​(double degrees) _#Set the radar to turn to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] setTurnRadarRight​(double degrees) _#Set the radar to turn to the right (following the decreasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] setTurnRate​(double turnRate) _#Sets the turn rate of the bot, which can be positive and negative._
+- [x] setTurnRight​(double degrees) _#Set the bot to turn to the right (following the decreasing degrees of the unit circle) until it turned the specified amount of degrees._
 - [ ] stop() _#Stop all movement including turning the gun and radar._
-- [ ] turnGunLeft​(double degrees) _#Turn the gun to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] turnGunRight​(double degrees) _#Turn the gun to the right (following the decreasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] turnLeft​(double degrees) _#Turn the bot to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] turnRadarLeft​(double degrees) _#Turn the radar to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
-- [ ] turnRadarRight​(double degrees) _#Turn the radar to the right (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] turnGunLeft​(double degrees) _#Turn the gun to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] turnGunRight​(double degrees) _#Turn the gun to the right (following the decreasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] turnLeft​(double degrees) _#Turn the bot to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] turnRadarLeft​(double degrees) _#Turn the radar to the left (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
+- [x] turnRadarRight​(double degrees) _#Turn the radar to the right (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
 - [x] turnRight​(double degrees) _#Turn the bot to the right (following the increasing degrees of the unit circle) until it turned the specified amount of degrees._
 waitFor​(Condition condition) _#Blocks until a condition is met, i.e. when a Condition.test() returns true._
 

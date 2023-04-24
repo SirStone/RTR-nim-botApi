@@ -74,13 +74,14 @@ proc runChatServer() =
   asyncCheck server.serve(Port(9001), cb)
 
 var json_message_for_controller = ""
-let actions = @["turnLeft", "turnRight", "turnGunLeft", "turnGunRight", "turnRadarLeft", "turnRadarRight"]
+let actions = @["turnLeft", "turnRight", "turnGunLeft", "turnGunRight", "turnRadarLeft", "turnRadarRight", "forward", "back"]
+# let actions = @["forward", "back"]
 var testsToDo = newSeq[Test]()
 randomize()
 var testTime = 10
-for i in 1..10:
+for i in 1..20:
   let action = actions[rand(0..actions.high)]
-  let value = rand(-360.0..360.0)
+  var value = rand(-360.0..360.0)
   let turn_start_test = testTime
   var dividend:float
   case action:
@@ -96,6 +97,12 @@ for i in 1..10:
     dividend = 45
   of "turnRadarRight":
     dividend = 45
+  of "forward":
+    value = rand(-100.0..100.0).ceil
+    dividend = 3
+  of "back":
+    value = rand(-100.0..100.0).ceil
+    dividend = 3
   else:
     dividend = 10
 
@@ -110,9 +117,14 @@ var csvResults = open(fileNameResults, fmAppend)
 csvResults.setFilePos(0)
 csvResults.writeLine("ROUND|ACTION|ACTION_START_VALUE|ACTION_END_VALUE|EXPECTED_VALUE|VALUE|OUTCOME")
 
+proc actionCheck(actionType:string, value_start:seq[float], value_end:seq[float], expected:float):float =
+  echo "[TEST] ",actionType,"_start: [x:",value_start[0],",y:",value_start[1],"]"
+  echo "[TEST] ",actionType,"_end: [x:",value_end[0],",y:",value_end[1],"]"
+  return sqrt((value_end[0] - value_start[0]).pow(2) + (value_end[1] - value_start[1]).pow(2))
+
 proc actionCheck(actionType:string, value_start:float, value_end:float, expected:float):float =
-  echo actionType,"_start: ",value_start
-  echo actionType,"_end: ",value_end
+  echo "[TEST] ",actionType,"_start: ",value_start
+  echo "[TEST] ",actionType,"_end: ",value_end
 
   case actionType:
   of "turnLeft":    
@@ -136,7 +148,7 @@ proc actionCheck(actionType:string, value_start:float, value_end:float, expected
     if result > 0: result = result - 360.0
 
 proc joinAsController(numberOfBots:int) {.async.} =
-  var body_turn_start, body_turn_end, gun_turn_start, gun_turn_end, radar_turn_start, radar_turn_end:float
+  var body_turn_start, body_turn_end, gun_turn_start, gun_turn_end, radar_turn_start, radar_turn_end, x_start, x_end, y_start, y_end:float
   try: # connects to the server with a websocket
     let controller_ws = await newWebSocket(connectionUrl)
     var currentTestIndex = 0
@@ -181,12 +193,14 @@ proc joinAsController(numberOfBots:int) {.async.} =
             botId = participant.id
       of roundEndedEventForObserver:
         let round_ended_event_for_observer = json_message_for_controller.fromJson(RoundEndedEventForObserver)
-        echo "skipped turns up to round ",round_ended_event_for_observer.roundNumber,": ",number_of_skipped_turns
+        # echo "[TEST] skipped turns up to round ",round_ended_event_for_observer.roundNumber,": ",number_of_skipped_turns
       of roundStartedEvent:
         # reset some variables
         body_turn_start = -1
         gun_turn_start = -1
         radar_turn_start = -1
+        x_start = -1
+        y_start = -1
         currentTestIndex = 0
       of tickEventForObserver:
         if currentTestIndex < testsToDo.len:
@@ -208,11 +222,21 @@ proc joinAsController(numberOfBots:int) {.async.} =
               else:
                 radar_turn_end = botState.radarDirection
 
-              # no need to check other bots
-              break
+              if x_start == -1:
+                x_start = botState.x
+              else:
+                x_end = botState.x
 
-          var turn_start_value, turn_end_value:float
+              if y_start == -1:
+                y_start = botState.y
+              else:
+                y_end = botState.y
+
+              break # no need to check other bots
+
+          var turn_start_value, turn_end_value, x_start_value, x_end_value, y_start_value, y_end_value:float
           let current_test = testsToDo[currentTestIndex]
+          var isXY = false
           case current_test.action:
           of "turnLeft":
             turn_start_value = body_turn_start
@@ -232,18 +256,43 @@ proc joinAsController(numberOfBots:int) {.async.} =
           of "turnRadarRight":
             turn_start_value = radar_turn_start
             turn_end_value = radar_turn_end
+          of "forward":
+            x_start_value = x_start
+            y_start_value = y_start
+            x_end_value = x_end
+            y_end_value = y_end
+            isXY = true
+          of "back":
+            x_start_value = x_start
+            y_start_value = y_start
+            x_end_value = x_end
+            y_end_value = y_end
+            isXY = true
+
+          # echo "[TEST] x_start_value: ", x_start_value, " y_start_value: ", y_start_value, " x_end_value: ", x_end_value, " y_end_value: ", y_end_value
 
           if tick_event_for_observer.turnNumber == current_test.turn_end:
-            let diff = actionCheck(current_test.action,turn_start_value,turn_end_value,current_test.value)
-            let outcome = round(diff,2) == round(current_test.value,2)
+            var csv_start_value, csv_end_value:string
+            var diff:float
+            if isXY: 
+              diff = actionCheck(current_test.action,@[x_start_value, y_start_value],@[x_end_value, y_end_value],current_test.value)
+              csv_start_value = "x:" & $x_start_value & " y:" & $y_start_value
+              csv_end_value = "x:" & $x_end_value & " y:" & $y_end_value
+            else:
+              diff = actionCheck(current_test.action,turn_start_value,turn_end_value,current_test.value)
+              csv_start_value = $turn_start_value
+              csv_end_value = $turn_end_value
+            let outcome = diff.round.abs == current_test.value.round.abs
             check outcome
 
             # write results to file
-            csvResults.writeLine($tick_event_for_observer.roundNumber & "|" & current_test.action & "|" & $turn_start_value & "|" & $turn_end_value & "|" & $current_test.value & "|" & $diff & "|" & $outcome)
+            csvResults.writeLine($tick_event_for_observer.roundNumber & "|" & current_test.action & "|" & csv_start_value & "|" & csv_end_value & "|" & $current_test.value.abs & "|" & $diff.abs & "|" & $outcome)
 
             body_turn_start = body_turn_end
             gun_turn_start = gun_turn_end
             radar_turn_start = radar_turn_end
+            x_start = x_end
+            y_start = y_end
             
             currentTestIndex = currentTestIndex + 1
         # else:
@@ -305,10 +354,10 @@ suite "Running a full game":
     # run bots with booter
     let botsToRun = @[
       # BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version), # fast death
-      # BotToRun(name:"Target", path:"assets/sample-bots-java-"&assets_version), # slowest death
+      BotToRun(name:"Target", path:"assets/sample-bots-java-"&assets_version), # slowest death
       # BotToRun(name:"Corners", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Walls", path:"assets/sample-bots-java-"&assets_version),
-      BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version), # medium speed death
+      # BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version), # medium speed death
       # BotToRun(name:"RamFire", path:"assets/sample-bots-java-"&assets_version),
 
       BotToRun(name:"TestBot", path:"out/tests"),
