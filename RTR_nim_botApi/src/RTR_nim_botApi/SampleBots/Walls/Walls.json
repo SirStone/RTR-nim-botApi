@@ -1,5 +1,5 @@
 {
-  "name": "Walls sample bot",
+  "name": "Walls NIM",
   "version": "0.1.0",
   "gameTypes": ["melee", "classic", "1v1"],
   "authors": ["SirStone"],

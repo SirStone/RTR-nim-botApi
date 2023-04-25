@@ -71,7 +71,7 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [ ] calcMaxTurnRate​(double speed) _#Calculates the maximum turn rate for a specific speed._
 - [ ] calcRadarBearing​(double direction) _#Calculates the bearing (delta angle) between the input direction and the direction of the radar._
 - [ ] clearEvents() _#Clears the remaining events that have not been processed yet._
-- [ ] directionTo​(double x, double y) _#Calculates the direction (angle) from the bot´s coordinates to a point x,y._
+- [x] directionTo​(double x, double y) _#Calculates the direction (angle) from the bot´s coordinates to a point x,y._
 - [ ] distanceTo​(double x, double y) _#Calculates the distance from the bot's coordinates to a point x,y._
 - [x] getArenaHeight() _#Height of the arena measured in units._
 - [x] getArenaWidth() _#Width of the arena measured in units._
@@ -112,8 +112,8 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [x] getTurretColor() _#Returns the color of the gun turret._
 - [ ] getVariant() _#The game variant, which is "Tank Royale"._
 - [ ] getVersion() _#Game version, e.g. "1.0.0"._
-- [ ] getX() _#Current X coordinate of the center of the bot._
-- [ ] getY() _#Current Y coordinate of the center of the bot._
+- [x] getX() _#Current X coordinate of the center of the bot._
+- [x] getY() _#Current Y coordinate of the center of the bot._
 - [x] go() _#Commits the current commands (actions), which finalizes the current turn for the bot._
 - [ ] gunBearingTo​(double x, double y) _#Calculates the bearing (delta angle) between the current direction of the bot's gun and the direction to the point x,y._
 - [x] isAdjustGunForBodyTurn() _#Checks if the gun is set to adjust for the bot turning, i.e. to turn independent of the bot's body turn._
@@ -121,8 +121,8 @@ This is the inspirational message given to me from [Flemming N. Larsen](https://
 - [x] isAdjustRadarForGunTurn() _#Checks if the radar is set to adjust for the gun turning, i.e. to turn independent of the gun's turn._
 - [ ] isDisabled() _#Specifies if the bot is disabled, i.e., when the energy is zero._
 - [ ] isStopped() _#Checks if the movement has been stopped._
-- [ ] normalizeAbsoluteAngle​(double angle) _#Normalizes an angle to an absolute angle into the range [0,360[_
-- [ ] normalizeRelativeAngle​(double angle) _#Normalizes an angle to an relative angle into the range [-180,180[_
+- [x] normalizeAbsoluteAngle​(double angle) _#Normalizes an angle to an absolute angle into the range [0,360[_
+- [x] normalizeRelativeAngle​(double angle) _#Normalizes an angle to an relative angle into the range [-180,180[_
 - [ ] onBotDeath​(BotDeathEvent botDeathEvent) _#The event handler triggered when another bot has died._
 - [ ] onBulletFired​(BulletFiredEvent bulletFiredEvent) _#The event handler triggered when the bot has fired a bullet._
 - [ ] onBulletHit​(BulletHitBotEvent bulletHitBotEvent) _#The event handler triggered when the bot has hit another bot with a bullet._
@@ -132,7 +132,7 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [x] onConnectionError​(ConnectionErrorEvent connectionErrorEvent) _#The event handler triggered when a connection error occurs._
 - [ ] onCustomEvent​(CustomEvent customEvent) _#The event handler triggered when some condition has been met._
 - [x] onDeath​(DeathEvent deathEvent) _#The event handler triggered when this bot has died._
-- [ ] onDisconnected​(DisconnectedEvent disconnectedEvent) _#The event handler triggered when disconnected from the server._
+- [x] onDisconnected​(DisconnectedEvent disconnectedEvent) _#The event handler triggered when disconnected from the server._
 - [x] onGameEnded​(GameEndedEvent gameEndedEvent) _#The event handler triggered when a game has ended._
 - [x] onGameStarted​(GameStartedEvent gameStatedEvent) _#The event handler triggered when a game has started._
 - [x] onHitBot​(HitBotEvent botHitBotEvent) _#The event handler triggered when the bot has collided with another bot._
@@ -152,7 +152,7 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [x] setBodyColor​(Color color) _#Sets the color of the body._
 - [x] setBulletColor​(Color color) _#Sets the color of the fired bullets._
 - [ ] setEventPriority​(java.lang.Class<BotEvent> eventClass, int priority) _#Changes the event priority for an event class._
-- [ ] setFire​(double firepower) _#Sets the gun to fire in the direction that the gun is pointing with the specified firepower._
+- [x] setFire​(double firepower) _#Sets the gun to fire in the direction that the gun is pointing with the specified firepower._
 - [ ] setFireAssist​(boolean enable) _#Enables or disables fire assistance explicitly._
 - [x] setGunColor​(Color color) _#Sets the color of the gun._
 - [x] setGunTurnRate​(double gunTurnRate) _#Sets the turn rate of the gun, which can be positive and negative._
@@ -163,11 +163,11 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 - [ ] setMaxTurnRate​(double maxTurnRate) _#Sets the maximum turn rate which applies to turn the bot to the left or right._
 - [x] setRadarColor​(Color color) _#Sets the color of the radar._
 - [x] setRadarTurnRate​(double gunRadarTurnRate) _#Sets the turn rate of the radar, which can be positive and negative._
-- [ ] setRescan() _#Sets the bot to rescan with the radar._
+- [x] setRescan() _#Sets the bot to rescan with the radar._
 - [ ] setResume() _#Sets the bot to scan (again) with the radar._
 - [x] setScanColor​(Color color) _#Sets the color of the scan arc._
-- [ ] setStop() _#Set the bot to stop all movement including turning the gun and radar._
-- [ ] setTargetSpeed​(double targetSpeed) _#Sets the new target speed for the bot in units per turn._
+- [x] setStop() _#Set the bot to stop all movement including turning the gun and radar._
+- [x] setTargetSpeed​(double targetSpeed) _#Sets the new target speed for the bot in units per turn._
 - [x] setTracksColor​(Color color) _#Sets the color of the tracks._
 - [x] setTurnRate​(double turnRate) _#Sets the turn rate of the bot, which can be positive and negative._
 - [x] setTurretColor​(Color color) _#Sets the color of the gun turret._
@@ -175,14 +175,14 @@ onBulletHitBullet​(BulletHitBulletEvent bulletHitBulletEvent) _#The event han
 
 ### IBot methods to implement
 - [x] back​(double distance) _#Moves the bot backward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
-- [ ] fire​(double firepower) _#Fire the gun in the direction as the gun is pointing._
+- [x] fire​(double firepower) _#Fire the gun in the direction as the gun is pointing._
 - [x] forward​(double distance) _#Moves the bot forward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
 - [x] getDistanceRemaining() _#Returns the distance remaining till the bot has finished moving after having called IBot.setForward(double), IBot.setBack(double), IBot.forward(double), or IBot.back(double)._
 - [X] getGunTurnRemaining() _#Returns the remaining turn in degrees till the gun has finished turning after having called IBot.setTurnGunLeft(double), IBot.setTurnGunRight(double), IBot.turnGunLeft(double), or IBot.turnGunRight(double)._
 - [X] getRadarTurnRemaining() _#Returns the remaining turn in degrees till the radar has finished turning after having called IBot.setTurnRadarLeft(double), IBot.setTurnRadarRight(double), IBot.turnRadarLeft(double), or IBot.turnRadarRight(double)._
 - [X] getTurnRemaining() _#Returns the remaining turn in degrees till the bot has finished turning after having called IBot.setTurnLeft(double), IBot.setTurnRight(double), IBot.turnLeft(double), or IBot.turnRight(double)._
 - [x] isRunning() _#Checks if this bot is running._
-- [ ] rescan() 	_#Scan (again) with the radar._
+- [x] rescan() 	_#Scan (again) with the radar._
 - [ ] resume() 	_#Resume the movement prior to calling the IBaseBot.setStop() or IBot.stop() method._
 - [x] setBack​(double distance) _#Set the bot to move backward until it has traveled a specific distance from its current position, or it is moving into an obstacle._
 - [x] setForward​(double distance) _#Set the bot to move forward until it has traveled a specific distance from its current position, or it is moving into an obstacle._

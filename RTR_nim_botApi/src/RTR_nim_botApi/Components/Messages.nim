@@ -85,7 +85,7 @@ type
     gunTurnRate*: float #Turn rate of the gun in degrees per turn (can be positive and negative)
     radarTurnRate*: float #Turn rate of the radar in degrees per turn (can be positive and negative)
     targetSpeed*: float #New target speed in units per turn (can be positive and negative)
-    firePower*: float #Attempt to fire gun with the specified firepower
+    firepower*: float #Attempt to fire gun with the specified firepower
     adjustGunForBodyTurn*: bool #Flag indicating if the gun must be adjusted to compensate for the body turn. Default is false.
     adjustRadarForBodyTurn*: bool #Flag indicating if the radar must be adjusted to compensate for the body turn. Default is false.
     adjustRadarForGunTurn*: bool #Flag indicating if the radar must be adjusted to compensate for the gun turn. Default is false.

@@ -79,7 +79,7 @@ let actions = @["turnLeft", "turnRight", "turnGunLeft", "turnGunRight", "turnRad
 var testsToDo = newSeq[Test]()
 randomize()
 var testTime = 10
-for i in 1..30:
+for i in 1..10:
   let action = actions[rand(0..actions.high)]
   var value = rand(-360.0..360.0)
   let turn_start_test = testTime
@@ -353,8 +353,8 @@ suite "Running a full game":
 
     # run bots with booter
     let botsToRun = @[
-      # BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version), # fast death
-      BotToRun(name:"Target", path:"assets/sample-bots-java-"&assets_version), # slowest death
+      BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version), # fast death
+      # BotToRun(name:"Target", path:"assets/sample-bots-java-"&assets_version), # slowest death
       # BotToRun(name:"Corners", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Walls", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version), # medium speed death

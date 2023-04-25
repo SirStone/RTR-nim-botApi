@@ -16,7 +16,6 @@ var moveAmount:float # How much to move
 
 # Called when a new round is started -> initialize and do some movement
 method run(bot:Walls) =
-  echo "run"
   # set colors
   setBodyColor("#000000")
   setTurretColor("#000000")
@@ -25,63 +24,65 @@ method run(bot:Walls) =
   setScanColor("#00FFFF")
   
   # Initialize moveAmount to the maximum possible for the arena
-  moveAmount = max(getArenaWidth(), getArenaHeight()).float;
+  moveAmount = max(getArenaWidth(), getArenaHeight()).float
   # Initialize peek to false
-  peek = false;
+  peek = false
 
   # turn to face a wall.
   # getDirection() % 90` means the remainder of getDirection() divided by 90.
-  turnRight(getDirection() mod 90.float)
+  let direction = getDirection()
+  let angle = direction mod 90.0
+  echo "angle: ",angle, " getDirection(): ",direction
+  turnRight(angle)
   forward(moveAmount)
+  echo "moveAmount done: ",moveAmount
+  # Turn the gun to turn right 90 degrees.
+  peek = true
+  turnGunRight(90)
+  turnRight(90)
 
-# method onSkippedTurn(bot:Walls, skipped_turn_event:SkippedTurnEvent) =
-#   if(false):
-#     echo "skipped turn number ",skipped_turn_event.turnNumber
+  # Main loop
+  while isRunning():
+    # Peek before we turn when forward() completes
+    peek = true
+    # Move up the wall
+    forward(moveAmount)
+    # Don't peek now
+    peek = false
+    # Turn to the next wall
+    turnRight(90)
 
-# method onGameStarted(bot:Walls, game_started_event_for_bot:GameStartedEventForBot) =
-#   if(false):
-#     echo "game started "
-#     echo "my ID is ",bot.myId
-#     echo "GAME SETUP"
-#     echo bot.gameSetup[]
+method onSkippedTurn(bot:Walls, skipped_turn_event:SkippedTurnEvent) = 
+  echo "skipped turn: ",skipped_turn_event.turnNumber
+  echo "is running: ",isRunning()
+  echo "last turn we sent intent", lastTurnWeSentIntent
+  echo "send intent: ",sendIntent
 
-# method onRoundStarted(bot:Walls, round_started_event:RoundStartedEvent) =
-#   if(false):
-#     echo "round ",round_started_event.roundNumber," started"
+# We hit another bot -> move away a bit
+method onHitBot(bot:Walls, bot_hit_bot_event:BotHitBotEvent) = 
+  # If he's in front of us, set back up a bit.
+  let bearing = bearingTo(bot_hit_bot_event.x, bot_hit_bot_event.y)
+  if bearing > -90 and bearing < 90:
+    back(100)
+  else: # else he's in back of us, so set ahead a bit.
+    forward(100)
 
-# method onGameEnded(bot:Walls, game_ended_event_for_bot:GameEndedEventForBot) =
-#   if(false):
-#     echo "Game ended in ",game_ended_event_for_bot.numberOfRounds
-#     echo "RESULTS ",game_ended_event_for_bot.results[]
-
-# method onTick(bot:Walls, tick_event_for_bot:TickEventForBot) =
-#   if(false):
-#     echo "TICK:",tick_event_for_bot[]
-
-# method onGameAborted(bot:Walls, game_aborted_event:GameAbortedEvent) =
-#   if(false):
-#     echo "Game aborted"
-
-# method onDeath(bot:Walls, bot_death_event:BotDeathEvent) = 
-#   if(false):
-#     echo "BOT DEAD:",bot_death_event[]
-
-# method onHitWall(bot:Walls, bot_hit_wall_event:BotHitWallEvent) = 
-#   if(false):
-#     echo "HIT WALL:",bot_hit_wall_event[]
-
-# method onHitBot(bot:Walls, bot_hit_bot_event:BotHitBotEvent) = 
-#   if(false):
-#     echo "HIT BOT:",bot_hit_bot_event[]
+method onDeath(bot:Walls, death_event:BotDeathEvent) = 
+  echo "DEATH"
 
 # method onHitByBullet(bot:Walls, hit_by_bullet_event:HitByBulletEvent) = 
 #   if(false):
 #     echo "OUCH:",hit_by_bullet_event[]
 #     echo "BULLET:",hit_by_bullet_event.bullet[]
 
-# method onScannedBot(bot:Walls, scanned_bot_event:ScannedBotEvent) = 
-#   if(false):
-#     echo "SCAN:",scanned_bot_event[]
+# We scanned another bot -> fire!
+method onScannedBot(bot:Walls, scanned_bot_event:ScannedBotEvent) = 
+  discard fire(2)
+  # Note that scan is called automatically when the bot is turning.
+  # By calling it manually here, we make sure we generate another scan event if there's a bot
+  # on the next wall, so that we do not start moving up it until it's gone.
+  if peek:
+    rescan()
 
 # method onConnectionError(bot:Walls, error:string) = 
 #   if(false):
