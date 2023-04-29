@@ -43,44 +43,50 @@ test_bot.newBot("TestBot.json")
 test_bot.start( position=InitialPosition(x:400, y:300, angle:0))
 
 # DEBUG VARIABLES
-method run(bot:TestBot) =
-  importTests()
-  echo "[TestBot] run started "
-  var test_index = 0
-  setAdjustGunForBodyTurn(true)
-  setAdjustRadarForGunTurn(true)
-  setAdjustRadarForBodyTurn(true)
+# method run(bot:TestBot) =
+#   importTests()
+#   echo "[TestBot] run started"
+#   var test_index = 0
+#   bot.setAdjustGunForBodyTurn(true)
+#   bot.setAdjustRadarForGunTurn(true)
+#   bot.setAdjustRadarForBodyTurn(true)
+#   echo "[TestBot] adjusted gun, radar and body"
 
-  while isRunning() and test_index < testsToDo.len:
-    let test = testsToDo[test_index]
-    if test.turn_start == getTurnNumber():
-      case test.action:
-      of "turnLeft":
-        turnLeft(test.value)
-      of "turnRight":
-        turnRight(test.value)
-      of "turnGunLeft":
-        turnGunLeft(test.value)
-      of "turnGunRight":
-        turnGunRight(test.value)
-      of "turnRadarLeft":
-        turnRadarLeft(test.value)
-      of "turnRadarRight":
-        turnRadarRight(test.value)
-      of "forward":
-        forward(test.value)
-      of "back":
-        back(test.value)
+#   echo "[TestBot] starting tests, bot status is ",bot.isRunning()
+#   while bot.isRunning() and test_index < testsToDo.len:
+#     let test = testsToDo[test_index]
+#     if test.turn_start == bot.getTurnNumber():
+#       echo "[TestBot] ",test.action," started ",test.value, " at turn ",bot.getTurnNumber()
+#       case test.action:
+#       of "turnLeft":
+#         bot.turnLeft(test.value)
+#       of "turnRight":
+#         bot.turnRight(test.value)
+#       of "turnGunLeft":
+#         bot.turnGunLeft(test.value)
+#       of "turnGunRight":
+#         bot.turnGunRight(test.value)
+#       of "turnRadarLeft":
+#        bot. turnRadarLeft(test.value)
+#       of "turnRadarRight":
+#         bot.turnRadarRight(test.value)
+#       of "forward":
+#         bot.forward(test.value)
+#       of "back":
+#         bot.back(test.value)
       
-      echo "[TestBot] ",test.action," done ",test.value, " at turn ",getTurnNumber()
-      test_index = test_index + 1
-    else:
-      go()
+#       echo "[TestBot] ",test.action," done ",test.value, " at turn ",bot.getTurnNumber()
+#       test_index = test_index + 1
+    
+#     bot.go()
+#   echo "[TestBot] tests ended"
     
 
 method onSkippedTurn(bot:TestBot, skipped_turn_event:SkippedTurnEvent) =
   # asyncCheck websocketServer.send("skipped")
-  echo "[TestBot] skipped turn ",skipped_turn_event.turnNumber
+  # echo "[TestBot] skipped turn ",skipped_turn_event.turnNumber
+  stdout.write "s"
+  stdout.flushFile()
 
 method onGameStarted(bot:TestBot, game_started_event_for_bot:GameStartedEventForBot) =
   let id = game_started_event_for_bot.myId

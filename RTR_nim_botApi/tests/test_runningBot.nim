@@ -28,7 +28,7 @@ proc runTankRoyaleServer() =
   echo "running server"
   try:
     let serverArgs = ["-jar", "robocode-tankroyale-server-"&assets_version&".jar", "--botSecrets", botSecret, "--controllerSecrets", controllerSecret, "--port", port, "--enable-initial-position"]
-    serverProcess = startProcess(command="java", workingDir="assets", args=serverArgs, options={poStdErrToStdOut, poUsePath})
+    serverProcess = startProcess(command="java", workingDir="assets", args=serverArgs, options={poStdErrToStdOut, poUsePath, poParentStreams})
     
     # wait for the booter to start
     sleep(2000)
@@ -167,7 +167,7 @@ proc joinAsController(numberOfBots:int) {.async.} =
       case `type`:
       of serverHandshake:
         let server_handshake = json_message_for_controller.fromJson(ServerHandshake)
-        let controller_handshake = ControllerHandshake(`type`:Type.controllerHandshake, sessionId:server_handshake.sessionId, name:"Conroller from tests", version:"1.0.0", author:"SirStone", secret:controllerSecret)
+        let controller_handshake = ControllerHandshake(`type`:Type.controllerHandshake, sessionId:server_handshake.sessionId, name:"Controller from tests", version:"1.0.0", author:"SirStone", secret:controllerSecret)
         await controller_ws.send(controller_handshake.toJson)
       of botListUpdate:
         let bot_list_update = json_message_for_controller.fromJson(BotListUpdate)

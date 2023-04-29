@@ -1,727 +1,204 @@
 ## ***ROBOCODE TANKROYALE BOT API FOR NIM***
 
 #++++++++ standard libraries ++++++++#
-import std/[os, strutils, threadpool, math]
+import std/[os, strutils, math]
 
 #++++++++ 3rd party libraries ++++++++#
 import asyncdispatch, ws, jsony, json
 
 #++++++++ local components ++++++++#
-import RTR_nim_botApi/Components/[Bot, Messages]
+import RTR_nim_botApi/Components/[Bot, Messages, GamePhysics]
 export Bot, Messages
 
 #++++++++ system variables ++++++++#
-var runningState:bool
 var firstTickSeen:bool = false
 var lastTurnWeSentIntent*:int = -1
-var sendIntent*:bool = false
+# var sendIntent*:bool = false
 var gs_ws:WebSocket
-var botLocked:bool = false
+var botRun = false
+var sendFlag = false
 
-#++++++++ GAME VARAIBLES ++++++++#
-var gameSetup:GameSetup # game setup
-var myId: int # my ID from the server
-
-#++++++++ TICK DATA FROM SERVER ++++++++#
-var turnNumber,roundNumber:int
-var energy,x,y,direction,gunDirection,radarDirection,radarSweep,speed,turnRate,gunTurnRate,radarTurnRate,gunHeat:float
-var initialPosition:InitialPosition = InitialPosition(x:0, y:0, angle:0)
-
-#++++++++ GAME PHYSICS ++++++++#
-# bots accelerate at the rate of 1 unit per turn but decelerate at the rate of 2 units per turn
-let ACCELERATION:float = 1
-let DECELERATION:float = -2
-
-# The speed can never exceed 8 units per turn
-let MAX_SPEED:float = 8
-var current_maxSpeed:float = MAX_SPEED
-
-# If standing still (0 units/turn), the maximum rate is 10° per turn
-let MAX_TURN_RATE:float = 10
-
-# The maximum rate of rotation is 20° per turn. This is added to the current rate of rotation of the bot
-let MAX_GUN_TURN_RATE:float = 20
-
-# The maximum rate of rotation is 45° per turn. This is added to the current rate of rotation of the gun
-let MAX_RADAR_TURN_RATE:float = 45
-
-# The maximum firepower is 3 and the minimum firepower is 0.1
-let MAX_FIRE_POWER:float = 3
-let MIN_FIRE_POWER:float = 0.1
-
-#++++++++ INTENT VARIABLES ++++++++#
-var intent_turnRate,intent_gunTurnRate,intent_radarTurnRate,intent_targetSpeed,intent_firepower:float
-var intent_adjustGunForBodyTurn,intent_adjustRadarForGunTurn,intent_adjustRadarForBodyTurn,intent_rescan,intent_fireAssist:bool
-var intent_bodyColor,intent_turretColor,intent_radarColor,intent_bulletColor,intent_scanColor,intent_tracksColor,intent_gunColor:string
-
-#++++++++ REMAININGS ++++++++#
-var remaining_turnRate:float = 0
-var remaining_turnGunRate:float = 0
-var remaining_turnRadarRate:float = 0
-var remaining_distance:float = 0
-
-proc updateRemainings() =
+proc updateRemainings(bot:Bot) =
   # body turn
-  if remaining_turnRate != 0:
-    if remaining_turnRate > 0:
-      intent_turnRate = min(remaining_turnRate, MAX_TURN_RATE)
-      remaining_turnRate = max(0, remaining_turnRate - MAX_TURN_RATE)
+  if bot.remaining_turnRate != 0:
+    if bot.remaining_turnRate > 0:
+      bot.intent_turnRate = min(bot.remaining_turnRate, MAX_TURN_RATE)
+      bot.remaining_turnRate = max(0, bot.remaining_turnRate - MAX_TURN_RATE)
     else:
-      intent_turnRate = max(remaining_turnRate, -MAX_TURN_RATE)
-      remaining_turnRate = min(0, remaining_turnRate + MAX_TURN_RATE)
+      bot.intent_turnRate = max(bot.remaining_turnRate, -MAX_TURN_RATE)
+      bot.remaining_turnRate = min(0, bot.remaining_turnRate + MAX_TURN_RATE)
 
   # gun turn
-  if remaining_turnGunRate != 0:
-    if remaining_turnGunRate > 0:
-      intent_gunTurnRate = min(remaining_turnGunRate, MAX_GUN_TURN_RATE)
-      remaining_turnGunRate = max(0, remaining_turnGunRate - MAX_GUN_TURN_RATE)
+  if bot.remaining_turnGunRate != 0:
+    if bot.remaining_turnGunRate > 0:
+      bot.intent_gunTurnRate = min(bot.remaining_turnGunRate, MAX_GUN_TURN_RATE)
+      bot.remaining_turnGunRate = max(0, bot.remaining_turnGunRate - MAX_GUN_TURN_RATE)
     else:
-      intent_gunTurnRate = max(remaining_turnGunRate, -MAX_GUN_TURN_RATE)
-      remaining_turnGunRate = min(0, remaining_turnGunRate + MAX_GUN_TURN_RATE)
+      bot.intent_gunTurnRate = max(bot.remaining_turnGunRate, -MAX_GUN_TURN_RATE)
+      bot.remaining_turnGunRate = min(0, bot.remaining_turnGunRate + MAX_GUN_TURN_RATE)
 
   # radar turn
-  if remaining_turnRadarRate != 0:
-    if remaining_turnRadarRate > 0:
-      intent_radarTurnRate = min(remaining_turnRadarRate, MAX_RADAR_TURN_RATE)
-      remaining_turnRadarRate = max(0, remaining_turnRadarRate - MAX_RADAR_TURN_RATE)
+  if bot.remaining_turnRadarRate != 0:
+    if bot.remaining_turnRadarRate > 0:
+      bot.intent_radarTurnRate = min(bot.remaining_turnRadarRate, MAX_RADAR_TURN_RATE)
+      bot.remaining_turnRadarRate = max(0, bot.remaining_turnRadarRate - MAX_RADAR_TURN_RATE)
     else:
-      intent_radarTurnRate = max(remaining_turnRadarRate, -MAX_RADAR_TURN_RATE)
-      remaining_turnRadarRate = min(0, remaining_turnRadarRate + MAX_RADAR_TURN_RATE)
+      bot.intent_radarTurnRate = max(bot.remaining_turnRadarRate, -MAX_RADAR_TURN_RATE)
+      bot.remaining_turnRadarRate = min(0, bot.remaining_turnRadarRate + MAX_RADAR_TURN_RATE)
 
   # target speed calculation
-  if remaining_distance != 0:
+  if bot.remaining_distance != 0:
     # how much turns requires to stop from the current speed? t = (V_target - V_current)/ -acceleration
-    let turnsRequiredToStop = -speed.abs / DECELERATION
-    let remaining_distance_breaking = speed.abs * turnsRequiredToStop + 0.5 * DECELERATION * turnsRequiredToStop.pow(2)
-    if remaining_distance > 0: # going forward
+    let turnsRequiredToStop = -bot.speed.abs / DECELERATION
+    let remaining_distance_breaking = bot.speed.abs * turnsRequiredToStop + 0.5 * DECELERATION * turnsRequiredToStop.pow(2)
+    if bot.remaining_distance > 0: # going forward
       # echo "[API] Turns required to stop: ", turnsRequiredToStop, " my speed: ", speed, " remaining distance: ", remaining_distance, " remaining distance breaking: ", remaining_distance_breaking
 
       # if the distance left is less or equal than the turns required to stop, then we need to slow down
-      if remaining_distance - remaining_distance_breaking < speed:
-        intent_targetSpeed = max(0, speed+DECELERATION)
-        remaining_distance = remaining_distance - intent_targetSpeed # what we left for stopping
+      if bot.remaining_distance - remaining_distance_breaking < bot.speed:
+        bot.intent_targetSpeed = max(0, bot.speed+DECELERATION)
+        bot.remaining_distance = bot.remaining_distance - bot.intent_targetSpeed # what we left for stopping
       else: # if the distance left is more than the turns required to stop, then we need to speed up to max speed
         # if the current_maxSpeed changes over time this will work for adjusting to the new velocity too
-        intent_targetSpeed = min(current_maxSpeed, speed+ACCELERATION)
-        remaining_distance = remaining_distance - intent_targetSpeed 
+        bot.intent_targetSpeed = min(bot.current_maxSpeed, bot.speed+ACCELERATION)
+        bot.remaining_distance = bot.remaining_distance - bot.intent_targetSpeed 
     else: # going backward
       # echo "[API] Turns required to stop: ", turnsRequiredToStop, " my speed: ", speed, " remaining distance: ", remaining_distance, " remaining distance breaking: ", remaining_distance_breaking
 
       # if the distance left is less or equal than the turns required to stop, then we need to slow down
-      if remaining_distance.abs - remaining_distance_breaking < speed.abs:
-        intent_targetSpeed = min(0, speed-DECELERATION)
-        remaining_distance = remaining_distance - intent_targetSpeed # what we left for stopping
+      if bot.remaining_distance.abs - remaining_distance_breaking < bot.speed.abs:
+        bot.intent_targetSpeed = min(0, bot.speed-DECELERATION)
+        bot.remaining_distance = bot.remaining_distance - bot.intent_targetSpeed # what we left for stopping
       else: # if the distance left is more than the turns required to stop, then we need to speed up to max speed
         # if the current_maxSpeed changes over time this will work for adjusting to the new velocity too
-        intent_targetSpeed = max(-current_maxSpeed, speed-ACCELERATION)
-        remaining_distance = remaining_distance - intent_targetSpeed
+        bot.intent_targetSpeed = max(-bot.current_maxSpeed, bot.speed-ACCELERATION)
+        bot.remaining_distance = bot.remaining_distance - bot.intent_targetSpeed
 
-      
-# the following section contains all the methods that are supposed to be overrided by the bot creator
-method run(bot:Bot) {.base.} = discard
-method onGameAborted(bot:Bot, gameAbortedEvent:GameAbortedEvent) {.base.} = discard
-method onGameEnded(bot:Bot, gameEndedEventForBot:GameEndedEventForBot) {.base.} = discard
-method onGameStarted(bot:Bot, gameStartedEventForBot:GameStartedEventForBot) {.base.} = discard
-method onHitByBullet(bot:Bot, hitByBulletEvent:HitByBulletEvent) {.base.} = discard
-method onHitBot(bot:Bot, botHitBotEvent:BotHitBotEvent) {.base.} = discard
-method onHitWall(bot:Bot, botHitWallEvent:BotHitWallEvent) {.base.} = discard
-method onRoundEnded(bot:Bot, roundEndedEventForBot:RoundEndedEventForBot) {.base.} = discard
-method onRoundStarted(bot:Bot, roundStartedEvent:RoundStartedEvent) {.base.} = discard
-method onSkippedTurn(bot:Bot, skippedTurnEvent:SkippedTurnEvent) {.base.} = discard
-method onScannedBot(bot:Bot, scannedBotEvent:ScannedBotEvent) {.base.} = discard
-method onTick(bot:Bot, tickEventForBot:TickEventForBot) {.base.} = discard
-method onDeath(bot:Bot, botDeathEvent:BotDeathEvent) {.base.} =  discard
-method onConnected(bot:Bot, url:string) {.base.} = discard
-method onConnectionError(bot:Bot, error:string) {.base.} = discard
-
-proc resetIntentVariables() =
-  intent_turnRate = 0
-  intent_gunTurnRate = 0
-  intent_radarTurnRate = 0
-  intent_targetSpeed = 0
-  intent_firePower = 0
-  intent_rescan = false
+proc resetIntentVariables(bot:Bot) =
+  bot.intent_turnRate = 0
+  bot.intent_gunTurnRate = 0
+  bot.intent_radarTurnRate = 0
+  bot.intent_targetSpeed = 0
+  bot.intent_firePower = 0
+  bot.intent_rescan = false
 
 # this function is not 'physically' sending the intent, bit just setting the 'sendIntent' flag to true if is the right moment to do so
-proc go*() =
-  ## call `go()` to send the intent immediately
-  sendIntent = true
-  while sendIntent and runningState:
-    sleep(1)
-
-# this loop is responsible for sending the intent to the server, it works untl the bot is a running state and if the sendIntend flag is true
-proc sendIntentLoop() {.async.} =
-  while(true):
-    if sendIntent and lastTurnWeSentIntent < turnNumber:
-      updateRemainings()
+proc sendIntent(bot:Bot) {.async.} =
+  echo "[API] sendIntent STARTED"
+  while true:
+    if lastTurnWeSentIntent < bot.getTurnNumber() and sendFlag: # we can send the intent only once per turn
+      echo "[API] sendIntent SENDING"
+      updateRemainings(bot)
 
       # if remaining_distance != 0: echo "[API] intent_targetSpeed: " & $intent_targetSpeed
-      let intent = BotIntent(`type`: Type.botIntent, turnRate:intent_turnRate, gunTurnRate:intent_gunTurnRate, radarTurnRate:intent_radarTurnRate, targetSpeed:intent_targetSpeed, firepower:intent_firePower, adjustGunForBodyTurn:intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:intent_adjustRadarForGunTurn, rescan:intent_rescan, fireAssist:intent_fireAssist, bodyColor:intent_bodyColor, turretColor:intent_turretColor, radarColor:intent_radarColor, bulletColor:intent_bulletColor, scanColor:intent_scanColor, tracksColor:intent_tracksColor, gunColor:intent_gunColor)
+      let intent = BotIntent(`type`: Type.botIntent, turnRate:bot.intent_turnRate, gunTurnRate:bot.intent_gunTurnRate, radarTurnRate:bot.intent_radarTurnRate, targetSpeed:bot.intent_targetSpeed, firepower:bot.intent_firePower, adjustGunForBodyTurn:bot.intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.intent_adjustRadarForGunTurn, rescan:bot.intent_rescan, fireAssist:bot.intent_fireAssist, bodyColor:bot.intent_bodyColor, turretColor:bot.intent_turretColor, radarColor:bot.intent_radarColor, bulletColor:bot.intent_bulletColor, scanColor:bot.intent_scanColor, tracksColor:bot.intent_tracksColor, gunColor:bot.intent_gunColor)
       await gs_ws.send(intent.toJson)
+      echo "[API] Sent intent: ", intent.toJson
 
-      lastTurnWeSentIntent = turnNumber
+      lastTurnWeSentIntent = bot.getTurnNumber()
 
       # reset the intent variables
-      resetIntentVariables()
+      resetIntentVariables(bot)
 
-      sendIntent = false
-    await sleepAsync(1)
+      sendFlag = false
+    echo "[API] sendIntent sleeping, lastTurnWeSentIntent: ", lastTurnWeSentIntent, " bot.getTurnNumber(): ", bot.getTurnNumber()
+    await sleepAsync(1) # sleep for 1ms
 
+proc go(bot:Bot) =
+  ## call `go()` to send the intent immediately
+  sendFlag = true
+  
 # very delicate process, don't touch unless you know what you are doing
 # we don't knwow if this will be a blocking call or not, so we need to run it in a separate thread
-proc runAsync(bot:Bot) {.thread.} =
+proc runAsync(bot:Bot) {.async.} =
   # first run the bot 'run()' method, the one scripted by the bot creator
-  # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
-  bot.run()
-
+  bot.run() # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
+  echo "[API] Bot run() finished"
   # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
-  while runningState:
-    go()
-
-proc setSecret*(bot:Bot, s:string) =
-  ## Use this function to override the default method to receive the secret
-  ## 
-  ## must be called before `start()`
-  bot.secret = s
-
-proc setServerURL*(bot:Bot, url:string) =
-  ## Use this function to override the default method to receive the server URL
-  ## 
-  ## must be called before `start()`
-  bot.serverConnectionURL = url
-
-# API callable procs
-proc isRunning*():bool =
-  ## returns true if the bot is alive
-  return runningState
-
-#++++++++ BOT SETUP +++++++++#
-proc setAdjustGunForBodyTurn*(adjust:bool) =
-  ## this is permanent, no need to call this multiple times
-  ## 
-  ## use ``true`` if the gun should turn independent from the body
-  ## 
-  ## use ``false`` if the gun should turn with the body
-  intent_adjustGunForBodyTurn = adjust
-
-proc setAdjustRadarForGunTurn*(adjust:bool) =
-  ## this is permanent, no need to call this multiple times
-  ## 
-  ## use ``true`` if the radar should turn independent from the gun
-  ## 
-  ## use ``false`` if the radar should turn with the gun
-  intent_adjustRadarForGunTurn = adjust
-
-proc setAdjustRadarForBodyTurn*(adjust:bool) =
-  ## this is permanent, no need to call this multiple times
-  ## 
-  ## use ``true`` if the radar should turn independent from the body
-  ## 
-  ## use ``false`` if the radar should turn with the body
-  intent_adjustRadarForBodyTurn = adjust
-
-proc isAdjustGunForBodyTurn*():bool =
-  ## returns true if the gun is turning independent from the body
-  return intent_adjustGunForBodyTurn
-
-proc isAdjustRadarForGunTurn*():bool =
-  ## returns true if the radar is turning independent from the gun
-  return intent_adjustRadarForGunTurn
-
-proc isAdjustRadarForBodyTurn*():bool =
-  ## returns true if the radar is turning independent from the body
-  return intent_adjustRadarForBodyTurn
-
-
-#++++++++ COLORS +++++++++#
-proc setBodyColor*(color:string) =
-  ## set the body color, permanently
-  ## 
-  ## use hex colors, like ``#FF0000``
-  intent_bodyColor = color
-
-proc setTurretColor*(color:string) =
-  ## set the turret color, permanently
-  ## 
-  ## use hex colors, like ``#FF0000``
-  intent_turretColor = color
-
-proc setRadarColor*(color:string) =
-  ## set the radar color, permanently
-  ## 
-  ## use hex colors, like ``#FF0000``
-  intent_radarColor = color
-
-proc setBulletColor*(color:string) =
-  ## set the bullet color, permanently
-  ## 
-  ## use hex colors, like ``#FF0000``
-  intent_bulletColor = color
-
-proc setScanColor*(color:string) =
-  ## set the scan color, permanently
-  ## 
-  ## use hex colors, like ``#FF0000``
-  intent_scanColor = color
-
-proc setTracksColor*(color:string) =
-  ## set the tracks color, permanently
-  ## 
-  ## use hex colors, like ``#FF0000``
-  intent_tracksColor = color
-
-proc setGunColor*(color:string) =
-  ## set the gun color, permanently
-  ## 
-  ## use hex colors, like ``#FF0000``
-  intent_gunColor = color
-
-proc getBodyColor*():string =
-  ## returns the body color
-  return intent_bodyColor
-
-proc getTurretColor*():string =
-  ## returns the turret color
-  return intent_turretColor
-
-proc getRadarColor*():string =
-  ## returns the radar color
-  return intent_radarColor
-
-proc getBulletColor*():string =
-  ## returns the bullet color
-  return intent_bulletColor
-
-proc getScanColor*():string =
-  ## returns the scan color
-  return intent_scanColor
-
-proc getTracksColor*():string =
-  ## returns the tracks color
-  return intent_tracksColor
-
-proc getGunColor*():string =
-  ## returns the gun color
-  return intent_gunColor
-
-#++++++++ ARENA +++++++++#
-proc getArenaHeight*():int =
-  ## returns the arena height (vertical)
-  return gameSetup.arenaHeight
-
-proc getArenaWidth*():int =
-  ## returns the arena width (horizontal)
-  return gameSetup.arenaWidth
-
-#++++++++ GAME AND BOT STATUS +++++++++#
-proc getTurnNumber*():int =
-  ## returns the current turn number
-  return turnNumber
-
-proc getX*():float =
-  ## returns the bot's X position
-  return x
-
-proc getY*():float =
-  ## returns the bot's Y position
-  return y
-
-
-#++++++++ TURNING RADAR +++++++++#
-proc setRadarTurnRate*(degrees:float) =
-  ## set the radar turn rate if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  if not botLocked:
-    remaining_turnRadarRate = degrees
-
-proc setTurnRadarLeft*(degrees:float) =
-  ## set the radar to turn left by `degrees` if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  if not botLocked:
-    remaining_turnRadarRate = degrees
-
-proc setTurnRadarRight*(degrees:float) =
-  ## set the radar to turn right by `degrees` if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  setTurnRadarLeft(-degrees)
-
-proc turnRadarLeft*(degrees:float) =
-  ## turn the radar left by `degrees` if the bot is not locked doing another blocking call
-  ## 
-  ## **BLOCKING CALL**
-  
-  if not botLocked:
-    # ask to turnRadar left for all degrees, the server will take care of turnRadaring the bot the max amount of degrees allowed
-    setTurnRadarLeft(degrees)
-    
-    # lock the bot, no other actions must be done until the action is completed
-    botLocked = true
-
-    # go until the bot is not running or the remaining_turnRadarRate is 0
-    while runningState and remaining_turnRadarRate != 0: go()
-
-    # unlock the bot
-    botLocked = false
-
-proc turnRadarRight*(degrees:float) =
-  ## turn the radar right by `degrees` if the bot is not locked doing another blocking call
-  ## 
-  ## **BLOCKING CALL**
-  turnRadarLeft(-degrees)
-
-proc getRadarTurnRemaining*():float =
-  ## returns the remaining radar turn rate in degrees
-  return remaining_turnRadarRate
-
-proc getRadarDirection*():float =
-  ## returns the current radar direction in degrees
-  return radarDirection
-
-proc setRescan*() =
-  ## set the radar to rescan if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  intent_rescan = true
-
-proc rescan*() =
-  ## rescan the radar if the bot is not locked doing another blocking call
-  ## 
-  ## **BLOCKING CALL**
-  
-  # ask to rescan
-  setRescan()
-    
-  # lock the bot, no other actions must be done until the action is completed
-  # botLocked = true
-  # go() # go once to start the rescan is set
-  # unlock the bot
-  # botLocked = false
-
-#++++++++ TURNING GUN +++++++++#
-proc setGunTurnRate*(degrees:float) =
-  ## set the gun turn rate if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  if not botLocked:
-    remaining_turnGunRate = degrees
-
-proc setTurnGunLeft*(degrees:float) =
-  ## set the gun to turn left by `degrees` if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  if not botLocked:
-    remaining_turnGunRate = degrees
-
-proc setTurnGunRight*(degrees:float) =
-  ## set the gun to turn right by `degrees` if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  setTurnGunLeft(-degrees)
-
-proc turnGunLeft*(degrees:float) =
-  ## turn the gun left by `degrees` if the bot is not locked doing another blocking call
-  ## 
-  ## **BLOCKING CALL**
-
-  # ask to turnGun left for all degrees, the server will take care of turnGuning the bot the max amount of degrees allowed
-  if not botLocked:
-    setTurnGunLeft(degrees)
-    
-    # lock the bot, no other actions must be done until the action is completed
-    botLocked = true
-
-    # go until the bot is not running or the remaining_turnGunRate is 0
-    while runningState and remaining_turnGunRate != 0: go()
-
-    # unlock the bot
-    botLocked = false
-
-proc turnGunRight*(degrees:float) =
-  ## turn the gun right by `degrees` if the bot is not locked doing another blocking call
-  ## 
-  ## **BLOCKING CALL**
-  turnGunLeft(-degrees)
-
-proc getGunTurnRemaining*():float =
-  ## returns the remaining gun turn rate in degrees
-  return remaining_turnGunRate
-
-proc getGunDirection*():float =
-  ## returns the current gun direction in degrees
-  return gunDirection
-
-proc getMaxGunTurnRate*():float =
-  return MAX_GUN_TURN_RATE
-
-
-#++++++++ TURNING BODY +++++++#
-proc setTurnRate(degrees:float) =
-  ## set the body turn rate if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  if not botLocked:
-    remaining_turnRate = degrees
-
-proc setTurnLeft*(degrees:float) =
-  ## set the body to turn left by `degrees` if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  if not botLocked:
-    remaining_turnRate = degrees
-
-proc setTurnRight*(degrees:float) =
-  ## set the body to turn right by `degrees` if the bot is not locked doing a blocking call
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  setTurnLeft(-degrees)
-
-proc turnLeft*(degrees:float) =
-  ## turn the body left by `degrees` if the bot is not locked doing another blocking call
-  ## 
-  ## **BLOCKING CALL**
-
-  if not botLocked:
-    # ask to turn left for all degrees, the server will take care of turning the bot the max amount of degrees allowed
-    setTurnLeft(degrees)
-    
-    # lock the bot, no other actions must be done until the action is completed
-    botLocked = true
-
-    # go until the bot is not running or the remaining_turnRate is 0
-    while runningState and remaining_turnRate != 0: go()
-
-    # unlock the bot
-    botLocked = false
-
-proc turnRight*(degrees:float) =
-  ## turn the body right by `degrees` if the bot is not locked doing another blocking call
-  ## 
-  ## **BLOCKING CALL**
-  turnLeft(-degrees)
-
-proc getTurnRemaining*():float =
-  ## returns the remaining body turn rate in degrees
-  return remaining_turnRate
-
-proc getDirection*():float =
-  ## returns the current body direction in degrees
-  return direction
-
-proc getMaxTurnRate*():float =
-  ## returns the maximum turn rate of the body in degrees
-  return MAX_TURN_RATE
-
-
-
-#++++++++ MOVING +++++++++#
-proc setTargetSpeed*(speed:float) =
-  ## set the target speed of the bot if the bot is not locked doing a blocking call
-  ## 
-  ## `speed` can be any value between ``-current max speed`` and ``+current max speed``, any value outside this range will be clamped
-  ## 
-  ## by default ``max speed`` is ``8 pixels per turn``
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  if not botLocked:
-    if speed > 0:
-      intent_targetSpeed = min(speed, current_maxSpeed)
-    elif speed < 0:
-      intent_targetSpeed = max(speed, -current_maxSpeed)
-    else:
-      intent_targetSpeed = speed
-
-proc setForward*(distance:float) =
-  ## set the bot to move forward by `distance` if the bot is not locked doing a blocking call
-  ## 
-  ## `distance` is in pixels
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  if not botLocked:
-    remaining_distance = distance
-
-proc setBack*(distance:float) =
-  ## set the bot to move back by `distance` if the bot is not locked doing a blocking call
-  ## 
-  ## `distance` is in pixels
-  ## 
-  ## **OVERRIDES CURRENT VALUE**
-  setForward(-distance)
-
-proc forward*(distance:float) =
-  ## move the bot forward by `distance` if the bot is not locked doing another blocking call
-  ## 
-  ## `distance` is in pixels
-  ## 
-  ## **BLOCKING CALL**
-
-  if not botLocked:
-    # ask to move forward for all pixels (distance), the server will take care of moving the bot the max amount of pixels allowed
-    setForward(distance)
-    
-    # lock the bot, no other actions must be done until the action is completed
-    botLocked = true
-
-    # go until the bot is not running or the remaining_turnRate is 0
-    while runningState and remaining_distance != 0: go()
-
-    # unlock the bot
-    botLocked = false
-
-proc back*(distance:float) =
-  ## move the bot back by `distance` if the bot is not locked doing another blocking call
-  ## 
-  ## `distance` is in pixels
-  ## 
-  ## **BLOCKING CALL**
-  forward(-distance)
-
-proc getDistanceRemaining*():float =
-  ## returns the remaining distance to move in pixels
-  return remaining_distance
-
-#++++++++++++++ FIRE! ++++++++++++++#
-proc setFire*(firepower:float):bool =
-  ## set the firepower of the next shot if the bot is not locked doing a blocking call
-  ## 
-  ## `firepower` can be any value between ``0.1`` and ``3``, any value outside this range will be clamped
-  ## 
-  ## If the `gun heat` is not 0 or if the `energy` is less than `firepower` the intent of firing will not be added
-
-  # clamp the value
-  if energy < firepower or gunHeat > 0:
-    return false # can't fire
-  else:
-    intent_firePower = clamp(firepower, MIN_FIRE_POWER, MAX_FIRE_POWER)
-    echo "[API] firepower set to: ", intent_firePower
-    return true 
-
-proc fire*(firepower:float):bool =
-  ## fire a shot with `firepower` if the bot is not locked doing another blocking call
-  ## 
-  ## `firepower` can be any value between ``0.1`` and ``3``, any value outside this range will be clamped
-  ## 
-  ## If the `gun heat` is not 0 or if the `energy` is less than `firepower` the shot will not be fired
-  ## 
-  ## **BLOCKING CALL**
-  return setFire(firepower) # check if the bot is not locked and the bot is able to shoot
-
-#++++++++++++++ UTILS ++++++++++++++#
-proc normalizeAbsoluteAngle*(angle:float):float =
-  ## normalize the angle to an absolute angle into the range [0,360]
-  ## 
-  ## `angle` is the angle to normalize
-  ## `return` is the normalized absolute angle
-  let angle_mod = angle mod 360
-  return if angle_mod >= 0: angle_mod
-  else: angle_mod + 360
-
-proc normalizeRelativeAngle*(angle:float):float =
-  ## normalize the angle to the range [-180,180]
-  ## 
-  ## `angle` is the angle to normalize
-  ## `return` is the normalized angle
-  let angle_mod = angle mod 360
-  return if angle_mod >= 0:
-    if angle_mod < 180: angle_mod
-    else: angle_mod - 360
-  else:
-    if angle_mod >= -180: angle_mod
-    else: angle_mod + 360
-
-proc directionTo*(x,y:float):float =
-  ## returns the direction (angle) from the bot's coordinates to the point (x,y).
-  ## 
-  ## `x` and `y` are the coordinates of the point
-  ## `return` is the direction to the point x,y in degrees in the range [0,360]
-  result = normalizeAbsoluteAngle(radToDeg(arctan2(y-getY(), x-getX())))
-
-proc bearingTo*(x,y:float):float =
-  ## returns the bearing to the point (x,y) in degrees
-  ## 
-  ## `x` and `y` are the coordinates of the point
-  ## `return` is the bearing to the point x,y in degrees in the range [-180,180]
-  result = normalizeRelativeAngle(directionTo(x,y) - direction)
-
-proc stopBot() = 
-  runningState = false
+  while bot.isRunning():
+    bot.go()
+    # TODO: if you put an `await sleepAsync(1) here the API will start working, but I don;t like this solution, I want to find a better one
+  echo "[API] Bot runAsync() finished"
+
+proc stopBot(bot:Bot) = 
+  bot.runningState = false
   firstTickSeen = false
   lastTurnWeSentIntent = -1
-  botLocked = false
-  sendIntent = true
+  bot.locked = false
+  # sendIntent = true
 
-  remaining_distance = 0
-  remaining_turnGunRate = 0
-  remaining_turnRate = 0
-  remaining_turnRadarRate = 0
+  bot.remaining_distance = 0
+  bot.remaining_turnGunRate = 0
+  bot.remaining_turnRate = 0
+  bot.remaining_turnRadarRate = 0
 
-  resetIntentVariables()
+  resetIntentVariables(bot)
 
-  sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
+  # sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
 
-proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
+proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
   # get the type of the message from the message itself
   let `type` = json_message.fromJson(Message).`type`
 
+  echo "[API] Received message: ", json_message
   # 'case' switch over type
   case `type`:
   of serverHandshake:
     let server_handshake = json_message.fromJson(ServerHandshake)
-    let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret, initialPosition:initialPosition)
-    await gs_ws.send(bot_handshake.toJson)
+    let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret, initialPosition:bot.initialPosition)
+    waitFor gs_ws.send(bot_handshake.toJson)
   
   of gameStartedEventForBot:
     # in case the bot is still running from a previous game we stop it
-    stopBot()
+    bot.stopBot()
+    asyncCheck sendIntent(bot)
 
     let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
     # store the Game Setup for the bot usage
-    gameSetup = game_started_event_for_bot.gameSetup
-    myId = game_started_event_for_bot.myId
+    bot.gameSetup = game_started_event_for_bot.gameSetup
+    bot.myId = game_started_event_for_bot.myId
 
     # activating the bot method
     bot.onGameStarted(game_started_event_for_bot)
     
     # send bot ready
     let bot_ready = BotReady(`type`:Type.botReady)
-    await gs_ws.send(bot_ready.toJson)
-
+    waitFor gs_ws.send(bot_ready.toJson)
+    echo "[API] Sent bot ready: ", bot_ready.toJson
   of tickEventForBot:
     let tick_event_for_bot = json_message.fromJson(TickEventForBot)
 
     # store the tick data for bot in local variables
-    turnNumber = tick_event_for_bot.turnNumber
-    roundNumber = tick_event_for_bot.roundNumber
-    energy = tick_event_for_bot.botState.energy
-    x = tick_event_for_bot.botState.x
-    y = tick_event_for_bot.botState.y
-    direction = tick_event_for_bot.botState.direction
-    gunDirection = tick_event_for_bot.botState.gunDirection
-    radarDirection = tick_event_for_bot.botState.radarDirection
-    radarSweep = tick_event_for_bot.botState.radarSweep
-    speed = tick_event_for_bot.botState.speed
-    turnRate = tick_event_for_bot.botState.turnRate
-    gunHeat = tick_event_for_bot.botState.gunHeat
-    radarTurnRate = tick_event_for_bot.botState.radarTurnRate
-    gunTurnRate = tick_event_for_bot.botState.gunTurnRate
-    gunHeat = tick_event_for_bot.botState.gunHeat
+    bot.turnNumber = tick_event_for_bot.turnNumber
+    bot.roundNumber = tick_event_for_bot.roundNumber
+    bot.energy = tick_event_for_bot.botState.energy
+    bot.x = tick_event_for_bot.botState.x
+    bot.y = tick_event_for_bot.botState.y
+    bot.direction = tick_event_for_bot.botState.direction
+    bot.gunDirection = tick_event_for_bot.botState.gunDirection
+    bot.radarDirection = tick_event_for_bot.botState.radarDirection
+    bot.radarSweep = tick_event_for_bot.botState.radarSweep
+    bot.speed = tick_event_for_bot.botState.speed
+    bot.turnRate = tick_event_for_bot.botState.turnRate
+    bot.gunHeat = tick_event_for_bot.botState.gunHeat
+    bot.radarTurnRate = tick_event_for_bot.botState.radarTurnRate
+    bot.gunTurnRate = tick_event_for_bot.botState.gunTurnRate
+    bot.gunHeat = tick_event_for_bot.botState.gunHeat
 
     # about colors, we are intent to keep the same color as the previous tick
-    intent_bodyColor = tick_event_for_bot.botState.bodyColor
-    intent_turretColor = tick_event_for_bot.botState.turretColor
-    intent_radarColor = tick_event_for_bot.botState.radarColor
-    intent_bulletColor = tick_event_for_bot.botState.bulletColor
-    intent_scanColor = tick_event_for_bot.botState.scanColor
-    intent_tracksColor = tick_event_for_bot.botState.tracksColor
-    intent_gunColor = tick_event_for_bot.botState.gunColor
+    bot.intent_bodyColor = tick_event_for_bot.botState.bodyColor
+    bot.intent_turretColor = tick_event_for_bot.botState.turretColor
+    bot.intent_radarColor = tick_event_for_bot.botState.radarColor
+    bot.intent_bulletColor = tick_event_for_bot.botState.bulletColor
+    bot.intent_scanColor = tick_event_for_bot.botState.scanColor
+    bot.intent_tracksColor = tick_event_for_bot.botState.tracksColor
+    bot.intent_gunColor = tick_event_for_bot.botState.gunColor
+
+    echo "[API] Tick: ", bot[]
 
     # starting run() thread at first tick seen
     if(not firstTickSeen):
       firstTickSeen = true
-      runningState = true
-      spawnX runAsync(bot)
 
     # activating the bot method
     bot.onTick(tick_event_for_bot)
@@ -730,10 +207,10 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
     for event in tick_event_for_bot.events:
       case parseEnum[Type](event["type"].getStr()):
       of Type.botDeathEvent:
-        stopBot()
+        bot.stopBot()
         bot.onDeath(fromJson($event, BotDeathEvent))
       of Type.botHitWallEvent:
-        remaining_distance = 0
+        bot.remaining_distance = 0
         bot.onHitWall(fromJson($event, BotHitWallEvent))
       of Type.bulletHitBotEvent:
         # conversion from BulletHitBotEvent to HitByBulletEvent
@@ -741,7 +218,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
         hit_by_bullet_event.`type` = Type.hitByBulletEvent
         bot.onHitByBullet(hit_by_bullet_event)
       of Type.botHitBotEvent:
-        remaining_distance = 0
+        bot.remaining_distance = 0
         bot.onHitBot(fromJson($event, BotHitBotEvent))
       of Type.scannedBotEvent:
         bot.onScannedBot(fromJson($event, ScannedBotEvent))        
@@ -751,7 +228,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
     
     # send intent
   of gameAbortedEvent:
-    stopBot()
+    # bot.stopBot()
 
     let game_aborted_event = json_message.fromJson(GameAbortedEvent)
 
@@ -759,7 +236,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
     bot.onGameAborted(game_aborted_event)
 
   of gameEndedEventForBot:
-    stopBot()
+    bot.stopBot()
 
     let game_ended_event_for_bot = json_message.fromJson(GameEndedEventForBot)
 
@@ -773,7 +250,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
     bot.onSkippedTurn(skipped_turn_event)
 
   of roundEndedEventForBot:
-    stopBot()
+    bot.stopBot()
 
     let round_ended_event_for_bot = json_message.fromJson(RoundEndedEventForBot)
 
@@ -781,6 +258,8 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
     bot.onRoundEnded(round_ended_event_for_bot)
 
   of roundStartedEvent:
+    bot.runningState = true
+    discard runAsync(bot)
     let round_started_event = json_message.fromJson(RoundStartedEvent)
 
     # activating the bot method
@@ -788,9 +267,9 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) {.async.} =
 
   else: echo "NOT HANDLED MESSAGE: ",json_message
 
-proc talkWithGS(bot:Bot, url:string) {.async.} =
+proc talkWithGS(bot:Bot, url:string) =
   try: # try a websocket connection to server
-    gs_ws = await newWebSocket(url)
+    gs_ws = waitFor newWebSocket(url)
 
     if(gs_ws.readyState == Open):
       bot.onConnected(url)
@@ -799,13 +278,13 @@ proc talkWithGS(bot:Bot, url:string) {.async.} =
     while(gs_ws.readyState == Open):
 
       # listen for a message
-      let json_message = await gs_ws.receiveStrPacket()
+      let json_message = waitFor gs_ws.receiveStrPacket()
 
       # GATE:asas the message is received we if is empty or similar useless message
       if json_message.isEmptyOrWhitespace(): continue
 
       # send the message to an handler 
-      asyncCheck handleMessage(bot, json_message, gs_ws)
+      handleMessage(bot, json_message, gs_ws)
 
   except CatchableError:
     bot.onConnectionError(getCurrentExceptionMsg())
@@ -839,8 +318,18 @@ proc newBot*(bot:Bot, json_file:string) =
   bot.platform = bot2.platform
   bot.programmingLang = bot2.programmingLang
   bot.secret = getEnv("SERVER_SECRET", "serversecret")
-  intent_rescan = false
-  intent_fireAssist = false
+  bot.intent_rescan = false
+  bot.intent_fireAssist = false
+  bot.initialPosition = InitialPosition(x:0, y:0, angle:0)
+  bot.ACCELERATION = ACCELERATION
+  bot.DECELERATION = DECELERATION
+  bot.MAX_SPEED = MAX_SPEED
+  bot.current_maxSpeed = MAX_SPEED
+  bot.MAX_TURN_RATE = MAX_TURN_RATE
+  bot.MAX_RADAR_TURN_RATE = MAX_RADAR_TURN_RATE
+  bot.MAX_GUN_TURN_RATE = MAX_GUN_TURN_RATE
+  bot.MAX_FIRE_POWER = MAX_FIRE_POWER
+  bot.MIN_FIRE_POWER = MIN_FIRE_POWER
 
 proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosition(x:0,y:0,angle:0)) =
   ## **Start the bot**
@@ -855,7 +344,7 @@ proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosi
   ## `position` (can be omitted) is the initial position of the bot. If not specified the bot will be placed at the center of the map.
   ## This custom position will work if the server is configured to use the custom initial positions.
   
-  initialPosition = position
+  bot.initialPosition = position
 
   # connect to the Game Server
   if(connect):
@@ -865,6 +354,4 @@ proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosi
     if bot.serverConnectionURL == "": 
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
 
-    asyncCheck sendIntentLoop()
-
-    waitFor talkWithGS(bot, bot.serverConnectionURL)
+    talkWithGS(bot, bot.serverConnectionURL)
