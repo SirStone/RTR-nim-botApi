@@ -1,5 +1,5 @@
-# NOTES ON THIS no-thread branch
-I wat try to make the API thread-less, this should make the API snappier in the IO part.
+# NOTES ON THIS multithreading BRANCH
+I want try to make the API multithreading, I don't know if I'm going to get a better API but there will be a deep redesign of the engine.
 
 # STATUS
 not working yet

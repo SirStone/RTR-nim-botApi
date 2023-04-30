@@ -1,7 +1,7 @@
 ## ***ROBOCODE TANKROYALE BOT API FOR NIM***
 
 #++++++++ standard libraries ++++++++#
-import std/[os, strutils, math]
+import std/[os, strutils, math, threadpool]
 
 #++++++++ 3rd party libraries ++++++++#
 import asyncdispatch, ws, jsony, json
@@ -83,42 +83,51 @@ proc resetIntentVariables(bot:Bot) =
   bot.intent_rescan = false
 
 # this function is not 'physically' sending the intent, bit just setting the 'sendIntent' flag to true if is the right moment to do so
-proc sendIntent(bot:Bot) {.async.} =
+proc sendIntentLoop(bot:Bot) {.thread.} =
   echo "[API] sendIntent STARTED"
   while true:
-    if lastTurnWeSentIntent < bot.getTurnNumber() and sendFlag: # we can send the intent only once per turn
-      echo "[API] sendIntent SENDING"
-      updateRemainings(bot)
+    if not bot.isRunning():
+      sleep(1)
+    else:
+      if lastTurnWeSentIntent < bot.getTurnNumber() and sendFlag: # we can send the intent only once per turn
+        echo "[API] sendIntent SENDING"
+        updateRemainings(bot)
 
-      # if remaining_distance != 0: echo "[API] intent_targetSpeed: " & $intent_targetSpeed
-      let intent = BotIntent(`type`: Type.botIntent, turnRate:bot.intent_turnRate, gunTurnRate:bot.intent_gunTurnRate, radarTurnRate:bot.intent_radarTurnRate, targetSpeed:bot.intent_targetSpeed, firepower:bot.intent_firePower, adjustGunForBodyTurn:bot.intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.intent_adjustRadarForGunTurn, rescan:bot.intent_rescan, fireAssist:bot.intent_fireAssist, bodyColor:bot.intent_bodyColor, turretColor:bot.intent_turretColor, radarColor:bot.intent_radarColor, bulletColor:bot.intent_bulletColor, scanColor:bot.intent_scanColor, tracksColor:bot.intent_tracksColor, gunColor:bot.intent_gunColor)
-      await gs_ws.send(intent.toJson)
-      echo "[API] Sent intent: ", intent.toJson
+        # if remaining_distance != 0: echo "[API] intent_targetSpeed: " & $intent_targetSpeed
+        let intent = BotIntent(`type`: Type.botIntent, turnRate:bot.intent_turnRate, gunTurnRate:bot.intent_gunTurnRate, radarTurnRate:bot.intent_radarTurnRate, targetSpeed:bot.intent_targetSpeed, firepower:bot.intent_firePower, adjustGunForBodyTurn:bot.intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.intent_adjustRadarForGunTurn, rescan:bot.intent_rescan, fireAssist:bot.intent_fireAssist, bodyColor:bot.intent_bodyColor, turretColor:bot.intent_turretColor, radarColor:bot.intent_radarColor, bulletColor:bot.intent_bulletColor, scanColor:bot.intent_scanColor, tracksColor:bot.intent_tracksColor, gunColor:bot.intent_gunColor)
+        # asyncCheck gs_ws.send(intent.toJson) #TODO: this must be romoved from here, is breaking the WebSocket
+        echo "[API] Sent intent: ", intent.toJson
 
-      lastTurnWeSentIntent = bot.getTurnNumber()
+        lastTurnWeSentIntent = bot.getTurnNumber()
 
-      # reset the intent variables
-      resetIntentVariables(bot)
+        # reset the intent variables
+        resetIntentVariables(bot)
 
-      sendFlag = false
-    echo "[API] sendIntent sleeping, lastTurnWeSentIntent: ", lastTurnWeSentIntent, " bot.getTurnNumber(): ", bot.getTurnNumber()
-    await sleepAsync(1) # sleep for 1ms
+        sendFlag = false
+      # echo "[API] sendIntent sleeping, lastTurnWeSentIntent: ", lastTurnWeSentIntent, " bot.getTurnNumber(): ", bot.getTurnNumber()
 
 proc go(bot:Bot) =
   ## call `go()` to send the intent immediately
   sendFlag = true
+  sleep(1)
   
 # very delicate process, don't touch unless you know what you are doing
 # we don't knwow if this will be a blocking call or not, so we need to run it in a separate thread
-proc runAsync(bot:Bot) {.async.} =
-  # first run the bot 'run()' method, the one scripted by the bot creator
-  bot.run() # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
-  echo "[API] Bot run() finished"
-  # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
-  while bot.isRunning():
-    bot.go()
-    # TODO: if you put an `await sleepAsync(1) here the API will start working, but I don;t like this solution, I want to find a better one
-  echo "[API] Bot runAsync() finished"
+proc runAsync(bot:Bot) {.thread.} =
+  while true:
+    if not bot.isRunning():
+      sleep(1)
+    else:
+      echo "[API] Bot run() started"
+      # first run the bot 'run()' method, the one scripted by the bot creator
+      bot.run() # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
+      echo "[API] Bot run() finished, starting the automatic go() loop"
+
+      # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
+      while bot.isRunning():
+        bot.go()
+        # TODO: if you put an `await sleepAsync(1) here the API will start working, but I don;t like this solution, I want to find a better one
+      echo "[API] Bot automatic go() loop finished"
 
 proc stopBot(bot:Bot) = 
   bot.runningState = false
@@ -140,7 +149,6 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
   # get the type of the message from the message itself
   let `type` = json_message.fromJson(Message).`type`
 
-  echo "[API] Received message: ", json_message
   # 'case' switch over type
   case `type`:
   of serverHandshake:
@@ -151,7 +159,6 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
   of gameStartedEventForBot:
     # in case the bot is still running from a previous game we stop it
     bot.stopBot()
-    asyncCheck sendIntent(bot)
 
     let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
     # store the Game Setup for the bot usage
@@ -194,11 +201,13 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
     bot.intent_tracksColor = tick_event_for_bot.botState.tracksColor
     bot.intent_gunColor = tick_event_for_bot.botState.gunColor
 
-    echo "[API] Tick: ", bot[]
+    stdout.write "t",bot.getTurnNumber()
+    stdout.flushFile()
 
     # starting run() thread at first tick seen
     if(not firstTickSeen):
       firstTickSeen = true
+      bot.runningState = true
 
     # activating the bot method
     bot.onTick(tick_event_for_bot)
@@ -228,7 +237,7 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
     
     # send intent
   of gameAbortedEvent:
-    # bot.stopBot()
+    bot.stopBot()
 
     let game_aborted_event = json_message.fromJson(GameAbortedEvent)
 
@@ -258,8 +267,6 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
     bot.onRoundEnded(round_ended_event_for_bot)
 
   of roundStartedEvent:
-    bot.runningState = true
-    discard runAsync(bot)
     let round_started_event = json_message.fromJson(RoundStartedEvent)
 
     # activating the bot method
@@ -267,9 +274,9 @@ proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
 
   else: echo "NOT HANDLED MESSAGE: ",json_message
 
-proc talkWithGS(bot:Bot, url:string) =
+proc talkWithGS(bot:Bot, url:string) {.gcsafe.} =
   try: # try a websocket connection to server
-    gs_ws = waitFor newWebSocket(url)
+    let gs_ws = waitFor newWebSocket(url)
 
     if(gs_ws.readyState == Open):
       bot.onConnected(url)
@@ -353,5 +360,8 @@ proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosi
 
     if bot.serverConnectionURL == "": 
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
-
-    talkWithGS(bot, bot.serverConnectionURL)
+    
+    spawn talkWithGS(bot, bot.serverConnectionURL)
+    spawn runAsync(bot)
+    spawn sendIntentLoop(bot)
+    sync()

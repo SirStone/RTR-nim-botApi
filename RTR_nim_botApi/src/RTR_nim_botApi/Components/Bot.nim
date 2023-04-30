@@ -15,15 +15,13 @@ type
     intent_bodyColor*,intent_turretColor*,intent_radarColor*,intent_bulletColor*,intent_scanColor*,intent_tracksColor*,intent_gunColor*:string
 
     #++++++++ REMAININGS ++++++++#
-    remaining_turnRate*:float
-    remaining_turnGunRate*:float
-    remaining_turnRadarRate*:float
-    remaining_distance*:float
+    remaining_turnRate*,remaining_turnGunRate*,remaining_turnRadarRate*,remaining_distance*:float
 
     #++++++++ MOVEMENT CONSTRAINTS ++++++++#
     #++++++++ GAME PHYSICS ++++++++#
-    # bots accelerate at the rate of 1 unit per turn but decelerate at the rate of 2 units per turn
     ACCELERATION*,DECELERATION*,MAX_SPEED*,MAX_TURN_RATE*,MAX_GUN_TURN_RATE*,MAX_RADAR_TURN_RATE*,MAX_FIRE_POWER*,MIN_FIRE_POWER*: float
+
+    #++++++++ CUSTOM LIMITS ++++++++#
     current_maxSpeed*:float
 
     #++++++++ GAME VARAIBLES ++++++++#
