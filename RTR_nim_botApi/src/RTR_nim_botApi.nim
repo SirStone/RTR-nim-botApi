@@ -1,7 +1,7 @@
 ## ***ROBOCODE TANKROYALE BOT API FOR NIM***
 
 #++++++++ standard libraries ++++++++#
-import std/[os, strutils, math]
+import std/[os, strutils, math, lists]
 
 #++++++++ 3rd party libraries ++++++++#
 import asyncdispatch, ws, jsony, json
@@ -17,6 +17,8 @@ var lastTurnWeSentIntent*:int = -1
 var gs_ws:WebSocket
 var botRun = false
 var sendFlag = false
+var inputBM = initSinglyLinkedList[string]()
+var outputBM = initSinglyLinkedList[Message]()
 
 proc updateRemainings(bot:Bot) =
   # body turn
@@ -86,14 +88,14 @@ proc resetIntentVariables(bot:Bot) =
 proc sendIntent(bot:Bot) {.async.} =
   echo "[API] sendIntent STARTED"
   while true:
-    if lastTurnWeSentIntent < bot.getTurnNumber() and sendFlag: # we can send the intent only once per turn
-      echo "[API] sendIntent SENDING"
+    if sendFlag: # we can send the intent only once per turn
       updateRemainings(bot)
 
       # if remaining_distance != 0: echo "[API] intent_targetSpeed: " & $intent_targetSpeed
       let intent = BotIntent(`type`: Type.botIntent, turnRate:bot.intent_turnRate, gunTurnRate:bot.intent_gunTurnRate, radarTurnRate:bot.intent_radarTurnRate, targetSpeed:bot.intent_targetSpeed, firepower:bot.intent_firePower, adjustGunForBodyTurn:bot.intent_adjustGunForBodyTurn, adjustRadarForBodyTurn:bot.intent_adjustRadarForBodyTurn, adjustRadarForGunTurn:bot.intent_adjustRadarForGunTurn, rescan:bot.intent_rescan, fireAssist:bot.intent_fireAssist, bodyColor:bot.intent_bodyColor, turretColor:bot.intent_turretColor, radarColor:bot.intent_radarColor, bulletColor:bot.intent_bulletColor, scanColor:bot.intent_scanColor, tracksColor:bot.intent_tracksColor, gunColor:bot.intent_gunColor)
       await gs_ws.send(intent.toJson)
-      echo "[API] Sent intent: ", intent.toJson
+      stdout.write "i"
+      stdout.flushFile()
 
       lastTurnWeSentIntent = bot.getTurnNumber()
 
@@ -101,24 +103,32 @@ proc sendIntent(bot:Bot) {.async.} =
       resetIntentVariables(bot)
 
       sendFlag = false
-    echo "[API] sendIntent sleeping, lastTurnWeSentIntent: ", lastTurnWeSentIntent, " bot.getTurnNumber(): ", bot.getTurnNumber()
+    # echo "[API] sendIntent sleeping, lastTurnWeSentIntent: ", lastTurnWeSentIntent, " bot.getTurnNumber(): ", bot.getTurnNumber()
     await sleepAsync(1) # sleep for 1ms
 
 proc go(bot:Bot) =
   ## call `go()` to send the intent immediately
-  sendFlag = true
+  if lastTurnWeSentIntent < bot.getTurnNumber():
+    sendFlag = true
+    stdout.write "G"
+    stdout.flushFile()
   
 # very delicate process, don't touch unless you know what you are doing
 # we don't knwow if this will be a blocking call or not, so we need to run it in a separate thread
 proc runAsync(bot:Bot) {.async.} =
-  # first run the bot 'run()' method, the one scripted by the bot creator
-  bot.run() # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
-  echo "[API] Bot run() finished"
-  # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
-  while bot.isRunning():
-    bot.go()
-    # TODO: if you put an `await sleepAsync(1) here the API will start working, but I don;t like this solution, I want to find a better one
-  echo "[API] Bot runAsync() finished"
+  while true:
+    if not bot.isRunning():
+      await sleepAsync(1)
+    else:
+      # first run the bot 'run()' method, the one scripted by the bot creator
+      bot.run() # this could be going in loop until the bot is dead or could finish up quckly or could be that is not implemented at all
+      echo "[API] Bot run() finished"
+      # when the bot creator's 'run()' exits, if the bot is still runnning, we send the intent automatically
+      while bot.isRunning():
+        bot.go()
+        # TODO: if you put an `await sleepAsync(1) here the API will start working, but I don't like this solution, I want to find a better one
+        await sleepAsync(1)
+    
 
 proc stopBot(bot:Bot) = 
   bot.runningState = false
@@ -134,160 +144,153 @@ proc stopBot(bot:Bot) =
 
   resetIntentVariables(bot)
 
-  # sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
-
-proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
-  # get the type of the message from the message itself
-  let `type` = json_message.fromJson(Message).`type`
-
-  echo "[API] Received message: ", json_message
-  # 'case' switch over type
-  case `type`:
-  of serverHandshake:
-    let server_handshake = json_message.fromJson(ServerHandshake)
-    let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret, initialPosition:bot.initialPosition)
-    waitFor gs_ws.send(bot_handshake.toJson)
-  
-  of gameStartedEventForBot:
-    # in case the bot is still running from a previous game we stop it
-    bot.stopBot()
-    asyncCheck sendIntent(bot)
-
-    let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
-    # store the Game Setup for the bot usage
-    bot.gameSetup = game_started_event_for_bot.gameSetup
-    bot.myId = game_started_event_for_bot.myId
-
-    # activating the bot method
-    bot.onGameStarted(game_started_event_for_bot)
-    
-    # send bot ready
-    let bot_ready = BotReady(`type`:Type.botReady)
-    waitFor gs_ws.send(bot_ready.toJson)
-    echo "[API] Sent bot ready: ", bot_ready.toJson
-  of tickEventForBot:
-    let tick_event_for_bot = json_message.fromJson(TickEventForBot)
-
-    # store the tick data for bot in local variables
-    bot.turnNumber = tick_event_for_bot.turnNumber
-    bot.roundNumber = tick_event_for_bot.roundNumber
-    bot.energy = tick_event_for_bot.botState.energy
-    bot.x = tick_event_for_bot.botState.x
-    bot.y = tick_event_for_bot.botState.y
-    bot.direction = tick_event_for_bot.botState.direction
-    bot.gunDirection = tick_event_for_bot.botState.gunDirection
-    bot.radarDirection = tick_event_for_bot.botState.radarDirection
-    bot.radarSweep = tick_event_for_bot.botState.radarSweep
-    bot.speed = tick_event_for_bot.botState.speed
-    bot.turnRate = tick_event_for_bot.botState.turnRate
-    bot.gunHeat = tick_event_for_bot.botState.gunHeat
-    bot.radarTurnRate = tick_event_for_bot.botState.radarTurnRate
-    bot.gunTurnRate = tick_event_for_bot.botState.gunTurnRate
-    bot.gunHeat = tick_event_for_bot.botState.gunHeat
-
-    # about colors, we are intent to keep the same color as the previous tick
-    bot.intent_bodyColor = tick_event_for_bot.botState.bodyColor
-    bot.intent_turretColor = tick_event_for_bot.botState.turretColor
-    bot.intent_radarColor = tick_event_for_bot.botState.radarColor
-    bot.intent_bulletColor = tick_event_for_bot.botState.bulletColor
-    bot.intent_scanColor = tick_event_for_bot.botState.scanColor
-    bot.intent_tracksColor = tick_event_for_bot.botState.tracksColor
-    bot.intent_gunColor = tick_event_for_bot.botState.gunColor
-
-    echo "[API] Tick: ", bot[]
-
-    # starting run() thread at first tick seen
-    if(not firstTickSeen):
-      firstTickSeen = true
-
-    # activating the bot method
-    bot.onTick(tick_event_for_bot)
-
-    # for every event inside this tick call the relative event for the bot
-    for event in tick_event_for_bot.events:
-      case parseEnum[Type](event["type"].getStr()):
-      of Type.botDeathEvent:
-        bot.stopBot()
-        bot.onDeath(fromJson($event, BotDeathEvent))
-      of Type.botHitWallEvent:
-        bot.remaining_distance = 0
-        bot.onHitWall(fromJson($event, BotHitWallEvent))
-      of Type.bulletHitBotEvent:
-        # conversion from BulletHitBotEvent to HitByBulletEvent
-        let hit_by_bullet_event = fromJson($event, HitByBulletEvent)
-        hit_by_bullet_event.`type` = Type.hitByBulletEvent
-        bot.onHitByBullet(hit_by_bullet_event)
-      of Type.botHitBotEvent:
-        bot.remaining_distance = 0
-        bot.onHitBot(fromJson($event, BotHitBotEvent))
-      of Type.scannedBotEvent:
-        bot.onScannedBot(fromJson($event, ScannedBotEvent))        
-      else:
-        echo "NOT HANDLED BOT TICK EVENT: ", event
-
-    
-    # send intent
-  of gameAbortedEvent:
-    # bot.stopBot()
-
-    let game_aborted_event = json_message.fromJson(GameAbortedEvent)
-
-    # activating the bot method
-    bot.onGameAborted(game_aborted_event)
-
-  of gameEndedEventForBot:
-    bot.stopBot()
-
-    let game_ended_event_for_bot = json_message.fromJson(GameEndedEventForBot)
-
-    # activating the bot method
-    bot.onGameEnded(game_ended_event_for_bot)
-
-  of skippedTurnEvent:
-    let skipped_turn_event = json_message.fromJson(SkippedTurnEvent)
-    
-    # activating the bot method
-    bot.onSkippedTurn(skipped_turn_event)
-
-  of roundEndedEventForBot:
-    bot.stopBot()
-
-    let round_ended_event_for_bot = json_message.fromJson(RoundEndedEventForBot)
-
-    # activating the bot method
-    bot.onRoundEnded(round_ended_event_for_bot)
-
-  of roundStartedEvent:
-    bot.runningState = true
-    discard runAsync(bot)
-    let round_started_event = json_message.fromJson(RoundStartedEvent)
-
-    # activating the bot method
-    bot.onRoundStarted(round_started_event)
-
-  else: echo "NOT HANDLED MESSAGE: ",json_message
-
-proc talkWithGS(bot:Bot, url:string) =
-  try: # try a websocket connection to server
-    gs_ws = waitFor newWebSocket(url)
-
-    if(gs_ws.readyState == Open):
-      bot.onConnected(url)
-
+proc eventHandler(bot:Bot) {.async.} =
     # while the connection is open...
     while(gs_ws.readyState == Open):
 
-      # listen for a message
-      let json_message = waitFor gs_ws.receiveStrPacket()
+      # get the message from the input Message Buffer
+      let message = inputBM.head
+      if message == nil: continue
+
+      let json_message = message.value
 
       # GATE:asas the message is received we if is empty or similar useless message
       if json_message.isEmptyOrWhitespace(): continue
 
       # send the message to an handler 
-      handleMessage(bot, json_message, gs_ws)
+      # handleMessage(bot, json_message, gs_ws)
+      # get the type of the message from the message itself
+      let `type` = json_message.fromJson(Message).`type`
 
-  except CatchableError:
-    bot.onConnectionError(getCurrentExceptionMsg())
+      # echo "[API] Received message: ", json_message
+      # 'case' switch over type
+      case `type`:
+      of serverHandshake:
+        let server_handshake = json_message.fromJson(ServerHandshake)
+        let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret, initialPosition:bot.initialPosition)
+        outputBM.add(bot_handshake)
+        bot.onConnected(bot.serverConnectionURL)
+        # waitFor gs_ws.send(bot_handshake.toJson)
+      
+      of gameStartedEventForBot:
+        # in case the bot is still running from a previous game we stop it
+        bot.stopBot()
+        asyncCheck sendIntent(bot)
+
+        let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
+        # store the Game Setup for the bot usage
+        bot.gameSetup = game_started_event_for_bot.gameSetup
+        bot.myId = game_started_event_for_bot.myId
+
+        # activating the bot method
+        bot.onGameStarted(game_started_event_for_bot)
+        
+        # send bot ready
+        let bot_ready = BotReady(`type`:Type.botReady)
+        waitFor gs_ws.send(bot_ready.toJson)
+        echo "[API] Sent bot ready: ", bot_ready.toJson
+      of tickEventForBot:
+        let tick_event_for_bot = json_message.fromJson(TickEventForBot)
+
+        # store the tick data for bot in local variables
+        bot.turnNumber = tick_event_for_bot.turnNumber
+        bot.roundNumber = tick_event_for_bot.roundNumber
+        bot.energy = tick_event_for_bot.botState.energy
+        bot.x = tick_event_for_bot.botState.x
+        bot.y = tick_event_for_bot.botState.y
+        bot.direction = tick_event_for_bot.botState.direction
+        bot.gunDirection = tick_event_for_bot.botState.gunDirection
+        bot.radarDirection = tick_event_for_bot.botState.radarDirection
+        bot.radarSweep = tick_event_for_bot.botState.radarSweep
+        bot.speed = tick_event_for_bot.botState.speed
+        bot.turnRate = tick_event_for_bot.botState.turnRate
+        bot.gunHeat = tick_event_for_bot.botState.gunHeat
+        bot.radarTurnRate = tick_event_for_bot.botState.radarTurnRate
+        bot.gunTurnRate = tick_event_for_bot.botState.gunTurnRate
+        bot.gunHeat = tick_event_for_bot.botState.gunHeat
+
+        # about colors, we are intent to keep the same color as the previous tick
+        bot.intent_bodyColor = tick_event_for_bot.botState.bodyColor
+        bot.intent_turretColor = tick_event_for_bot.botState.turretColor
+        bot.intent_radarColor = tick_event_for_bot.botState.radarColor
+        bot.intent_bulletColor = tick_event_for_bot.botState.bulletColor
+        bot.intent_scanColor = tick_event_for_bot.botState.scanColor
+        bot.intent_tracksColor = tick_event_for_bot.botState.tracksColor
+        bot.intent_gunColor = tick_event_for_bot.botState.gunColor
+
+        stdout.write "t",bot.getTurnNumber()
+        stdout.flushFile()
+
+        # starting run() thread at first tick seen
+        if(not firstTickSeen):
+          firstTickSeen = true
+
+        # activating the bot method
+        bot.onTick(tick_event_for_bot)
+
+        # for every event inside this tick call the relative event for the bot
+        for event in tick_event_for_bot.events:
+          case parseEnum[Type](event["type"].getStr()):
+          of Type.botDeathEvent:
+            bot.stopBot()
+            bot.onDeath(fromJson($event, BotDeathEvent))
+          of Type.botHitWallEvent:
+            bot.remaining_distance = 0
+            bot.onHitWall(fromJson($event, BotHitWallEvent))
+          of Type.bulletHitBotEvent:
+            # conversion from BulletHitBotEvent to HitByBulletEvent
+            let hit_by_bullet_event = fromJson($event, HitByBulletEvent)
+            hit_by_bullet_event.`type` = Type.hitByBulletEvent
+            bot.onHitByBullet(hit_by_bullet_event)
+          of Type.botHitBotEvent:
+            bot.remaining_distance = 0
+            bot.onHitBot(fromJson($event, BotHitBotEvent))
+          of Type.scannedBotEvent:
+            bot.onScannedBot(fromJson($event, ScannedBotEvent))        
+          else:
+            echo "NOT HANDLED BOT TICK EVENT: ", event
+
+        
+        # send intent
+      of gameAbortedEvent:
+        # bot.stopBot()
+
+        let game_aborted_event = json_message.fromJson(GameAbortedEvent)
+
+        # activating the bot method
+        bot.onGameAborted(game_aborted_event)
+
+      of gameEndedEventForBot:
+        bot.stopBot()
+
+        let game_ended_event_for_bot = json_message.fromJson(GameEndedEventForBot)
+
+        # activating the bot method
+        bot.onGameEnded(game_ended_event_for_bot)
+
+      of skippedTurnEvent:
+        let skipped_turn_event = json_message.fromJson(SkippedTurnEvent)
+        
+        # activating the bot method
+        bot.onSkippedTurn(skipped_turn_event)
+
+      of roundEndedEventForBot:
+        bot.stopBot()
+
+        let round_ended_event_for_bot = json_message.fromJson(RoundEndedEventForBot)
+
+        # activating the bot method
+        bot.onRoundEnded(round_ended_event_for_bot)
+
+      of roundStartedEvent:
+        bot.runningState = true
+        discard runAsync(bot)
+        let round_started_event = json_message.fromJson(RoundStartedEvent)
+
+        # activating the bot method
+        bot.onRoundStarted(round_started_event)
+
+      else: echo "NOT HANDLED MESSAGE: ",json_message
 
 proc newBot*(bot:Bot, json_file:string) =
   ## **Create a new bot instance**
@@ -331,6 +334,36 @@ proc newBot*(bot:Bot, json_file:string) =
   bot.MAX_FIRE_POWER = MAX_FIRE_POWER
   bot.MIN_FIRE_POWER = MIN_FIRE_POWER
 
+proc messageListener() {.async.} =
+  # while the connection is open...
+  while(gs_ws.readyState == Open):
+
+    # listen for a message
+    let json_message = waitFor gs_ws.receiveStrPacket()
+
+    # GATE:asas the message is received we if is empty or similar useless message
+    if json_message.isEmptyOrWhitespace(): continue
+
+    # put the message in the input Message Buffer
+    let message = newSinglyLinkedNode[string](json_message)
+    inputBM.add(message)
+
+proc messageSender() {.async.} =
+  # while the connection is open...
+  while(gs_ws.readyState == Open):
+    let message = outputBM.head
+    if message != nil:
+      echo "sending message: ", message.value[]
+      # send the message
+      waitFor gs_ws.send(message.value.toJson)
+
+      # remove the message from the output Message Buffer
+      outputBM.remove(message)
+    else:
+      echo "no message to send"
+    
+  echo "MessageSender stopped"
+
 proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosition(x:0,y:0,angle:0)) =
   ## **Start the bot**
   ## 
@@ -354,4 +387,15 @@ proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosi
     if bot.serverConnectionURL == "": 
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
 
-    talkWithGS(bot, bot.serverConnectionURL)
+    try: # try a websocket connection to server
+      gs_ws = waitFor newWebSocket(bot.serverConnectionURL)
+
+      if(gs_ws.readyState == Open):
+        # start the 4 async tasks
+        asyncCheck messageListener()
+        asyncCheck messageSender()
+        asyncCheck eventHandler(bot)
+    except CatchableError:
+      bot.onConnectionError(getCurrentExceptionMsg())
+
+    # talkWithGS(bot)

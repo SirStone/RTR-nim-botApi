@@ -42,44 +42,43 @@ var test_bot = TestBot()
 test_bot.newBot("TestBot.json")
 test_bot.start( position=InitialPosition(x:400, y:300, angle:0))
 
-# DEBUG VARIABLES
-# method run(bot:TestBot) =
-#   importTests()
-#   echo "[TestBot] run started"
-#   var test_index = 0
-#   bot.setAdjustGunForBodyTurn(true)
-#   bot.setAdjustRadarForGunTurn(true)
-#   bot.setAdjustRadarForBodyTurn(true)
-#   echo "[TestBot] adjusted gun, radar and body"
+method run(bot:TestBot) =
+  importTests()
+  echo "[TestBot] run started"
+  var test_index = 0
+  bot.setAdjustGunForBodyTurn(true)
+  bot.setAdjustRadarForGunTurn(true)
+  bot.setAdjustRadarForBodyTurn(true)
+  echo "[TestBot] adjusted gun, radar and body"
 
-#   echo "[TestBot] starting tests, bot status is ",bot.isRunning()
-#   while bot.isRunning() and test_index < testsToDo.len:
-#     let test = testsToDo[test_index]
-#     if test.turn_start == bot.getTurnNumber():
-#       echo "[TestBot] ",test.action," started ",test.value, " at turn ",bot.getTurnNumber()
-#       case test.action:
-#       of "turnLeft":
-#         bot.turnLeft(test.value)
-#       of "turnRight":
-#         bot.turnRight(test.value)
-#       of "turnGunLeft":
-#         bot.turnGunLeft(test.value)
-#       of "turnGunRight":
-#         bot.turnGunRight(test.value)
-#       of "turnRadarLeft":
-#        bot. turnRadarLeft(test.value)
-#       of "turnRadarRight":
-#         bot.turnRadarRight(test.value)
-#       of "forward":
-#         bot.forward(test.value)
-#       of "back":
-#         bot.back(test.value)
+  echo "[TestBot] starting tests, bot status is ",bot.isRunning()
+  while bot.isRunning() and test_index < testsToDo.len:
+    let test = testsToDo[test_index]
+    if test.turn_start == bot.getTurnNumber():
+      echo "[TestBot] ",test.action," started ",test.value, " at turn ",bot.getTurnNumber()
+      case test.action:
+      of "turnLeft":
+        bot.turnLeft(test.value)
+      of "turnRight":
+        bot.turnRight(test.value)
+      of "turnGunLeft":
+        bot.turnGunLeft(test.value)
+      of "turnGunRight":
+        bot.turnGunRight(test.value)
+      of "turnRadarLeft":
+       bot. turnRadarLeft(test.value)
+      of "turnRadarRight":
+        bot.turnRadarRight(test.value)
+      of "forward":
+        bot.forward(test.value)
+      of "back":
+        bot.back(test.value)
       
-#       echo "[TestBot] ",test.action," done ",test.value, " at turn ",bot.getTurnNumber()
-#       test_index = test_index + 1
+      echo "[TestBot] ",test.action," done ",test.value, " at turn ",bot.getTurnNumber()
+      test_index = test_index + 1
     
-#     bot.go()
-#   echo "[TestBot] tests ended"
+    bot.go()
+  echo "[TestBot] tests ended"
     
 
 method onSkippedTurn(bot:TestBot, skipped_turn_event:SkippedTurnEvent) =
