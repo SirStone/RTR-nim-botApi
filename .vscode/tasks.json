@@ -11,6 +11,19 @@
     },
     "tasks": [
         {
+            "label": "build Producer/Consumer model",
+            "type": "shell",
+            "command": "nim",
+            "args": [
+                "c","--threads:on","--gc:orc","--out:out/ProdCons_model","src/ProdCons_model.nim"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
             "label": "build Walls",
             "type": "shell",
             "command": "bash",

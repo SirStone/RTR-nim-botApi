@@ -17,6 +17,8 @@ var lastTurnWeSentIntent*:int = -1
 var gs_ws:WebSocket
 var botRun = false
 var sendFlag = false
+var bot3:Bot
+var chan: Channel[string]
 
 proc updateRemainings(bot:Bot) =
   # body turn
@@ -145,141 +147,147 @@ proc stopBot(bot:Bot) =
 
   # sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
 
-proc handleMessage(bot:Bot, json_message:string, gs_ws:WebSocket) =
-  # get the type of the message from the message itself
-  let `type` = json_message.fromJson(Message).`type`
+proc messageHandler() =
+  while true:
+    let tried = chan.tryRecv()
+    if tried.dataAvailable:
+      echo "[API]",tried.msg
+    else:
+      sleep(100)
+  # # get the type of the message from the message itself
+  # let `type` = json_message.fromJson(Message).`type`
 
-  # 'case' switch over type
-  case `type`:
-  of serverHandshake:
-    let server_handshake = json_message.fromJson(ServerHandshake)
-    let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret, initialPosition:bot.initialPosition)
-    waitFor gs_ws.send(bot_handshake.toJson)
+  # # 'case' switch over type
+  # case `type`:
+  # of serverHandshake:
+  #   let server_handshake = json_message.fromJson(ServerHandshake)
+  #   let bot_handshake = BotHandshake(`type`:Type.botHandshake, sessionId:server_handshake.sessionId, name:bot.name, version:bot.version, authors:bot.authors, secret:bot.secret, initialPosition:bot.initialPosition)
+  #   waitFor gs_ws.send(bot_handshake.toJson)
   
-  of gameStartedEventForBot:
-    # in case the bot is still running from a previous game we stop it
-    bot.stopBot()
+  # of gameStartedEventForBot:
+  #   # in case the bot is still running from a previous game we stop it
+  #   bot.stopBot()
 
-    let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
-    # store the Game Setup for the bot usage
-    bot.gameSetup = game_started_event_for_bot.gameSetup
-    bot.myId = game_started_event_for_bot.myId
+  #   let game_started_event_for_bot = json_message.fromJson(GameStartedEventForBot)
+  #   # store the Game Setup for the bot usage
+  #   bot.gameSetup = game_started_event_for_bot.gameSetup
+  #   bot.myId = game_started_event_for_bot.myId
 
-    # activating the bot method
-    bot.onGameStarted(game_started_event_for_bot)
+  #   # activating the bot method
+  #   bot.onGameStarted(game_started_event_for_bot)
     
-    # send bot ready
-    let bot_ready = BotReady(`type`:Type.botReady)
-    waitFor gs_ws.send(bot_ready.toJson)
-    echo "[API] Sent bot ready: ", bot_ready.toJson
-  of tickEventForBot:
-    let tick_event_for_bot = json_message.fromJson(TickEventForBot)
+  #   # send bot ready
+  #   let bot_ready = BotReady(`type`:Type.botReady)
+  #   waitFor gs_ws.send(bot_ready.toJson)
+  #   echo "[API] Sent bot ready: ", bot_ready.toJson
+  # of tickEventForBot:
+  #   let tick_event_for_bot = json_message.fromJson(TickEventForBot)
 
-    # store the tick data for bot in local variables
-    bot.turnNumber = tick_event_for_bot.turnNumber
-    bot.roundNumber = tick_event_for_bot.roundNumber
-    bot.energy = tick_event_for_bot.botState.energy
-    bot.x = tick_event_for_bot.botState.x
-    bot.y = tick_event_for_bot.botState.y
-    bot.direction = tick_event_for_bot.botState.direction
-    bot.gunDirection = tick_event_for_bot.botState.gunDirection
-    bot.radarDirection = tick_event_for_bot.botState.radarDirection
-    bot.radarSweep = tick_event_for_bot.botState.radarSweep
-    bot.speed = tick_event_for_bot.botState.speed
-    bot.turnRate = tick_event_for_bot.botState.turnRate
-    bot.gunHeat = tick_event_for_bot.botState.gunHeat
-    bot.radarTurnRate = tick_event_for_bot.botState.radarTurnRate
-    bot.gunTurnRate = tick_event_for_bot.botState.gunTurnRate
-    bot.gunHeat = tick_event_for_bot.botState.gunHeat
+  #   # store the tick data for bot in local variables
+  #   bot.turnNumber = tick_event_for_bot.turnNumber
+  #   bot.roundNumber = tick_event_for_bot.roundNumber
+  #   bot.energy = tick_event_for_bot.botState.energy
+  #   bot.x = tick_event_for_bot.botState.x
+  #   bot.y = tick_event_for_bot.botState.y
+  #   bot.direction = tick_event_for_bot.botState.direction
+  #   bot.gunDirection = tick_event_for_bot.botState.gunDirection
+  #   bot.radarDirection = tick_event_for_bot.botState.radarDirection
+  #   bot.radarSweep = tick_event_for_bot.botState.radarSweep
+  #   bot.speed = tick_event_for_bot.botState.speed
+  #   bot.turnRate = tick_event_for_bot.botState.turnRate
+  #   bot.gunHeat = tick_event_for_bot.botState.gunHeat
+  #   bot.radarTurnRate = tick_event_for_bot.botState.radarTurnRate
+  #   bot.gunTurnRate = tick_event_for_bot.botState.gunTurnRate
+  #   bot.gunHeat = tick_event_for_bot.botState.gunHeat
 
-    # about colors, we are intent to keep the same color as the previous tick
-    bot.intent_bodyColor = tick_event_for_bot.botState.bodyColor
-    bot.intent_turretColor = tick_event_for_bot.botState.turretColor
-    bot.intent_radarColor = tick_event_for_bot.botState.radarColor
-    bot.intent_bulletColor = tick_event_for_bot.botState.bulletColor
-    bot.intent_scanColor = tick_event_for_bot.botState.scanColor
-    bot.intent_tracksColor = tick_event_for_bot.botState.tracksColor
-    bot.intent_gunColor = tick_event_for_bot.botState.gunColor
+  #   # about colors, we are intent to keep the same color as the previous tick
+  #   bot.intent_bodyColor = tick_event_for_bot.botState.bodyColor
+  #   bot.intent_turretColor = tick_event_for_bot.botState.turretColor
+  #   bot.intent_radarColor = tick_event_for_bot.botState.radarColor
+  #   bot.intent_bulletColor = tick_event_for_bot.botState.bulletColor
+  #   bot.intent_scanColor = tick_event_for_bot.botState.scanColor
+  #   bot.intent_tracksColor = tick_event_for_bot.botState.tracksColor
+  #   bot.intent_gunColor = tick_event_for_bot.botState.gunColor
 
-    stdout.write "t",bot.getTurnNumber()
-    stdout.flushFile()
+  #   stdout.write "t",bot.getTurnNumber()
+  #   stdout.flushFile()
 
-    # starting run() thread at first tick seen
-    if(not firstTickSeen):
-      firstTickSeen = true
-      bot.runningState = true
+  #   # starting run() thread at first tick seen
+  #   if(not firstTickSeen):
+  #     firstTickSeen = true
+  #     bot.runningState = true
 
-    # activating the bot method
-    bot.onTick(tick_event_for_bot)
+  #   # activating the bot method
+  #   bot.onTick(tick_event_for_bot)
 
-    # for every event inside this tick call the relative event for the bot
-    for event in tick_event_for_bot.events:
-      case parseEnum[Type](event["type"].getStr()):
-      of Type.botDeathEvent:
-        bot.stopBot()
-        bot.onDeath(fromJson($event, BotDeathEvent))
-      of Type.botHitWallEvent:
-        bot.remaining_distance = 0
-        bot.onHitWall(fromJson($event, BotHitWallEvent))
-      of Type.bulletHitBotEvent:
-        # conversion from BulletHitBotEvent to HitByBulletEvent
-        let hit_by_bullet_event = fromJson($event, HitByBulletEvent)
-        hit_by_bullet_event.`type` = Type.hitByBulletEvent
-        bot.onHitByBullet(hit_by_bullet_event)
-      of Type.botHitBotEvent:
-        bot.remaining_distance = 0
-        bot.onHitBot(fromJson($event, BotHitBotEvent))
-      of Type.scannedBotEvent:
-        bot.onScannedBot(fromJson($event, ScannedBotEvent))        
-      else:
-        echo "NOT HANDLED BOT TICK EVENT: ", event
+  #   # for every event inside this tick call the relative event for the bot
+  #   for event in tick_event_for_bot.events:
+  #     case parseEnum[Type](event["type"].getStr()):
+  #     of Type.botDeathEvent:
+  #       bot.stopBot()
+  #       bot.onDeath(fromJson($event, BotDeathEvent))
+  #     of Type.botHitWallEvent:
+  #       bot.remaining_distance = 0
+  #       bot.onHitWall(fromJson($event, BotHitWallEvent))
+  #     of Type.bulletHitBotEvent:
+  #       # conversion from BulletHitBotEvent to HitByBulletEvent
+  #       let hit_by_bullet_event = fromJson($event, HitByBulletEvent)
+  #       hit_by_bullet_event.`type` = Type.hitByBulletEvent
+  #       bot.onHitByBullet(hit_by_bullet_event)
+  #     of Type.botHitBotEvent:
+  #       bot.remaining_distance = 0
+  #       bot.onHitBot(fromJson($event, BotHitBotEvent))
+  #     of Type.scannedBotEvent:
+  #       bot.onScannedBot(fromJson($event, ScannedBotEvent))        
+  #     else:
+  #       echo "NOT HANDLED BOT TICK EVENT: ", event
 
     
-    # send intent
-  of gameAbortedEvent:
-    bot.stopBot()
+  #   # send intent
+  # of gameAbortedEvent:
+  #   bot.stopBot()
 
-    let game_aborted_event = json_message.fromJson(GameAbortedEvent)
+  #   let game_aborted_event = json_message.fromJson(GameAbortedEvent)
 
-    # activating the bot method
-    bot.onGameAborted(game_aborted_event)
+  #   # activating the bot method
+  #   bot.onGameAborted(game_aborted_event)
 
-  of gameEndedEventForBot:
-    bot.stopBot()
+  # of gameEndedEventForBot:
+  #   bot.stopBot()
 
-    let game_ended_event_for_bot = json_message.fromJson(GameEndedEventForBot)
+  #   let game_ended_event_for_bot = json_message.fromJson(GameEndedEventForBot)
 
-    # activating the bot method
-    bot.onGameEnded(game_ended_event_for_bot)
+  #   # activating the bot method
+  #   bot.onGameEnded(game_ended_event_for_bot)
 
-  of skippedTurnEvent:
-    let skipped_turn_event = json_message.fromJson(SkippedTurnEvent)
+  # of skippedTurnEvent:
+  #   let skipped_turn_event = json_message.fromJson(SkippedTurnEvent)
     
-    # activating the bot method
-    bot.onSkippedTurn(skipped_turn_event)
+  #   # activating the bot method
+  #   bot.onSkippedTurn(skipped_turn_event)
 
-  of roundEndedEventForBot:
-    bot.stopBot()
+  # of roundEndedEventForBot:
+  #   bot.stopBot()
 
-    let round_ended_event_for_bot = json_message.fromJson(RoundEndedEventForBot)
+  #   let round_ended_event_for_bot = json_message.fromJson(RoundEndedEventForBot)
 
-    # activating the bot method
-    bot.onRoundEnded(round_ended_event_for_bot)
+  #   # activating the bot method
+  #   bot.onRoundEnded(round_ended_event_for_bot)
 
-  of roundStartedEvent:
-    let round_started_event = json_message.fromJson(RoundStartedEvent)
+  # of roundStartedEvent:
+  #   let round_started_event = json_message.fromJson(RoundStartedEvent)
 
-    # activating the bot method
-    bot.onRoundStarted(round_started_event)
+  #   # activating the bot method
+  #   bot.onRoundStarted(round_started_event)
 
-  else: echo "NOT HANDLED MESSAGE: ",json_message
+  # else: echo "NOT HANDLED MESSAGE: ",json_message
 
-proc talkWithGS(bot:Bot, url:string) {.gcsafe.} =
+proc messageListener(url:string) {.gcsafe.}=
   try: # try a websocket connection to server
-    let gs_ws = waitFor newWebSocket(url)
+    gs_ws = waitFor newWebSocket(url)
 
-    if(gs_ws.readyState == Open):
-      bot.onConnected(url)
+    # if(gs_ws.readyState == Open):
+    #   bot.onConnected(url)
 
     # while the connection is open...
     while(gs_ws.readyState == Open):
@@ -291,10 +299,11 @@ proc talkWithGS(bot:Bot, url:string) {.gcsafe.} =
       if json_message.isEmptyOrWhitespace(): continue
 
       # send the message to an handler 
-      handleMessage(bot, json_message, gs_ws)
+      # handleMessage(bot, json_message, gs_ws)
+      chan.send(json_message)
 
   except CatchableError:
-    bot.onConnectionError(getCurrentExceptionMsg())
+    bot3.onConnectionError(getCurrentExceptionMsg())
 
 proc newBot*(bot:Bot, json_file:string) =
   ## **Create a new bot instance**
@@ -338,6 +347,8 @@ proc newBot*(bot:Bot, json_file:string) =
   bot.MAX_FIRE_POWER = MAX_FIRE_POWER
   bot.MIN_FIRE_POWER = MIN_FIRE_POWER
 
+  bot3 = bot
+
 proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosition(x:0,y:0,angle:0)) =
   ## **Start the bot**
   ## 
@@ -361,7 +372,11 @@ proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosi
     if bot.serverConnectionURL == "": 
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
     
-    spawn talkWithGS(bot, bot.serverConnectionURL)
-    spawn runAsync(bot)
-    spawn sendIntentLoop(bot)
-    sync()
+    chan.open()
+    var messageListenerWorker: Thread[void]
+    var messageHandlerWorker: Thread[void]
+    createThread(messageListenerWorker, messageListener)
+    createThread(messageHandlerWorker, messageHandler)
+    
+    messageListenerWorker.joinThread()
+    chan.close()
