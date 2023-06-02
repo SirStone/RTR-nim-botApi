@@ -1,62 +1,57 @@
-import random, locks, system, os
+import std/locks
 
-const bufferSize = 100
+const
+  BufferSize = 10
 
 type
-  RingList[T] = object
-    data: array[bufferSize, T]
+  RingList*[T] = object
+    buffer: array[0..BufferSize - 1, T]
+    count: int
     writeIndex: int
     readIndex: int
-    count: int
     lock: Lock
-    notFull: Cond
     notEmpty: Cond
+    notFull: Cond
 
-proc put[T](r: var RingList[T], item: T) =
-  acquire(r.lock)
-  while r.count == bufferSize:
-    wait(r.notFull, r.lock)
-  r.data[r.writeIndex] = item
-  r.writeIndex = (r.writeIndex + 1) mod bufferSize
-  r.count += 1
-  echo "how mainy items in buffer:", r.count
-  signal(r.notEmpty)
-  release(r.lock)
+var
+  ringList: RingList[string]
+  producerThreads: array[0..0, Thread[RingList[string]]]
+  consumerThreads: array[0..0, Thread[RingList[string]]]
 
-proc get[T](r: var RingList[T]): T =
-  acquire(r.lock)
-  while r.count == 0:
-    wait(r.notEmpty, r.lock)
-  let item = r.data[r.readIndex]
-  r.readIndex = (r.readIndex + 1) mod bufferSize
-  r.count -= 1
-  signal(r.notFull)
-  release(r.lock)
-  return item
+proc producer(r: var RingList[string]) {.thread.} =
+  for i in 1..10:
+    acquire(r.lock)
+    while r.count >= BufferSize:
+      r.notFull.wait(r.lock)
+    r.buffer[r.writeIndex] = "Item " & $i
+    r.count += 1
+    echo "Produced: ", r.buffer[r.writeIndex]
+    r.writeIndex = (r.writeIndex + 1) mod BufferSize
+    r.notEmpty.signal()
+    release(r.lock)
 
-var ringList: RingList[int]
+proc consumer(r: var RingList[string]) {.thread.} =
+  for i in 1..10:
+    acquire(r.lock)
+    while r.count <= 0:
+      r.notEmpty.wait(r.lock)
+    let item = r.buffer[r.readIndex]
+    r.count -= 1
+    echo "Consumed: ", item
+    r.readIndex = (r.readIndex + 1) mod BufferSize
+    r.notFull.signal()
+    release(r.lock)
+
 initLock(ringList.lock)
-initCond(ringList.notFull)
 initCond(ringList.notEmpty)
+initCond(ringList.notFull)
 
-proc producer() =
-  while true:
-    let num = rand(100)
-    put(ringList, num)
-    sleep(1)
-    # echo "Produced:", num
-  put(ringList, -1)  # indicating end of production
+createThread(producerThreads[0], proc () {.thread, nimcall.} = producer, ringList)
+createThread(consumerThreads[0], proc () {.thread, nimcall.} = consumer, ringList)
 
-proc consumer() =
-  var num: int
-  while true:
-    num = get(ringList)
-    if num == -1:  # end of production
-      echo "Consumed:", num
-      break
+joinThread(producerThreads[0])
+joinThread(consumerThreads[0])
 
-var workerP, workerC: Thread[void]
-createThread(workerP, producer)
-createThread(workerC, consumer)
-
-joinThreads(workerP, workerC)
+deinitCond(ringList.notFull)
+deinitCond(ringList.notEmpty)
+deinitLock(ringList.lock)

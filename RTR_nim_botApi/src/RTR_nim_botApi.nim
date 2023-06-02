@@ -1,7 +1,7 @@
 ## ***ROBOCODE TANKROYALE BOT API FOR NIM***
 
 #++++++++ standard libraries ++++++++#
-import std/[os, strutils, math, threadpool]
+import std/[os, strutils, math, locks]
 
 #++++++++ 3rd party libraries ++++++++#
 import asyncdispatch, ws, jsony, json
@@ -18,7 +18,45 @@ var gs_ws:WebSocket
 var botRun = false
 var sendFlag = false
 var bot3:Bot
-var chan: Channel[string]
+
+const bufferSize = 100
+
+type
+  RingList[T] = object
+    data: array[bufferSize, T]
+    writeIndex: int
+    readIndex: int
+    count: int
+    lock: Lock
+    notFull: Cond
+    notEmpty: Cond
+
+proc put[T](r: var RingList[T], item: T) =
+  acquire(r.lock)
+  while r.count == bufferSize:
+    wait(r.notFull, r.lock)
+  r.data[r.writeIndex] = item
+  r.writeIndex = (r.writeIndex + 1) mod bufferSize
+  r.count += 1
+  echo "how mainy items in buffer:", r.count
+  signal(r.notEmpty)
+  release(r.lock)
+
+proc get[T](r: var RingList[T]): T =
+  acquire(r.lock)
+  while r.count == 0:
+    wait(r.notEmpty, r.lock)
+  let item = r.data[r.readIndex]
+  r.readIndex = (r.readIndex + 1) mod bufferSize
+  r.count -= 1
+  signal(r.notFull)
+  release(r.lock)
+  return item
+
+var messageList: RingList[string]
+initLock(messageList.lock)
+initCond(messageList.notFull)
+initCond(messageList.notEmpty)
 
 proc updateRemainings(bot:Bot) =
   # body turn
@@ -282,7 +320,7 @@ proc messageHandler() =
 
   # else: echo "NOT HANDLED MESSAGE: ",json_message
 
-proc messageListener(url:string) {.gcsafe.}=
+proc messageListener(url:string) =
   try: # try a websocket connection to server
     gs_ws = waitFor newWebSocket(url)
 
@@ -298,10 +336,8 @@ proc messageListener(url:string) {.gcsafe.}=
       # GATE:asas the message is received we if is empty or similar useless message
       if json_message.isEmptyOrWhitespace(): continue
 
-      # send the message to an handler 
       # handleMessage(bot, json_message, gs_ws)
-      chan.send(json_message)
-
+      messageList.put(json_message)
   except CatchableError:
     bot3.onConnectionError(getCurrentExceptionMsg())
 
@@ -372,11 +408,8 @@ proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosi
     if bot.serverConnectionURL == "": 
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
     
-    chan.open()
-    var messageListenerWorker: Thread[void]
-    var messageHandlerWorker: Thread[void]
+    var messageListenerWorker, messageHandlerWorker: Thread[void]
     createThread(messageListenerWorker, messageListener)
     createThread(messageHandlerWorker, messageHandler)
     
-    messageListenerWorker.joinThread()
-    chan.close()
+    joinThreads(messageListenerWorker, messageHandlerWorker)
