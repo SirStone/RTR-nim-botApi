@@ -11,6 +11,19 @@
     },
     "tasks": [
         {
+            "label": "build Producer/Consumer async",
+            "type": "shell",
+            "command": "nim",
+            "args": [
+                "c","--out:out/ProducerConsumer_async","src/ProducerConsumer_async.nim"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
             "label": "build Walls",
             "type": "shell",
             "command": "bash",

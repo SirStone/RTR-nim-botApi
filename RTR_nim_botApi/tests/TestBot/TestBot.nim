@@ -2,7 +2,7 @@
 import ../../src/RTR_nim_botApi
 
 # TEST LIBS: unit test, websockets
-import std/[parsecsv, parseutils]
+import std/[parsecsv, parseutils, sugar]
 # import ws, asyncdispatch
 
 # let websocketServer:WebSocket = waitFor newWebSocket("ws://localhost:9001")
@@ -40,6 +40,8 @@ var test_bot = TestBot()
 
 # STEP 4: start the bot calling for the initBot(json_file, connect[true/false]) proc
 test_bot.newBot("TestBot.json")
+assert test_bot.name == "TeStBoT"
+
 test_bot.start( position=InitialPosition(x:400, y:300, angle:0))
 
 method run(bot:TestBot) =
