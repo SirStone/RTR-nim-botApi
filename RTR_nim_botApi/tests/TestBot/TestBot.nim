@@ -1,9 +1,10 @@
 # STEP 1: import the module
 import ../../src/RTR_nim_botApi
+import os
 
 # TEST LIBS: unit test, websockets
 import std/[parsecsv, parseutils, sugar]
-# import ws, asyncdispatch
+# import asyncdispatch
 
 # let websocketServer:WebSocket = waitFor newWebSocket("ws://localhost:9001")
 
@@ -80,13 +81,14 @@ method run(bot:TestBot) =
       test_index = test_index + 1
     
     bot.go()
+  bot.go()
   echo "[TestBot] tests ended"
     
 
 method onSkippedTurn(bot:TestBot, skipped_turn_event:SkippedTurnEvent) =
   # asyncCheck websocketServer.send("skipped")
   # echo "[TestBot] skipped turn ",skipped_turn_event.turnNumber
-  stdout.write "s"
+  stdout.write "s" & $skipped_turn_event.turnNumber
   stdout.flushFile()
 
 method onGameStarted(bot:TestBot, game_started_event_for_bot:GameStartedEventForBot) =
@@ -108,8 +110,8 @@ method onGameEnded(bot:TestBot, game_ended_event_for_bot:GameEndedEventForBot) =
     echo "[TestBot]RESULTS ",game_ended_event_for_bot.results[]
 
 method onTick(bot:TestBot, tick_event_for_bot:TickEventForBot) =
-  stdout.write "."
-  stdout.flushFile()
+  # stdout.write "."
+  # stdout.flushFile()
 
   if(false):
     echo "[TestBot]TICK:",tick_event_for_bot[]

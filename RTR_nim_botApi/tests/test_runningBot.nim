@@ -74,8 +74,8 @@ proc runChatServer() =
   asyncCheck server.serve(Port(9001), cb)
 
 var json_message_for_controller = ""
-let actions = @["turnLeft", "turnRight", "turnGunLeft", "turnGunRight", "turnRadarLeft", "turnRadarRight", "forward", "back"]
-# let actions = @["forward", "back"]
+# let actions = @["turnLeft", "turnRight", "turnGunLeft", "turnGunRight", "turnRadarLeft", "turnRadarRight", "forward", "back"]
+let actions = @["turnLeft"]
 var testsToDo = newSeq[Test]()
 randomize()
 var testTime = 10
@@ -194,6 +194,7 @@ proc joinAsController(numberOfBots:int) {.async.} =
       of roundEndedEventForObserver:
         let round_ended_event_for_observer = json_message_for_controller.fromJson(RoundEndedEventForObserver)
         # echo "[TEST] skipped turns up to round ",round_ended_event_for_observer.roundNumber,": ",number_of_skipped_turns
+        csvResults.flushFile
       of roundStartedEvent:
         # reset some variables
         body_turn_start = -1
@@ -353,8 +354,8 @@ suite "Running a full game":
 
     # run bots with booter
     let botsToRun = @[
-      BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version), # fast death
-      # BotToRun(name:"Target", path:"assets/sample-bots-java-"&assets_version), # slowest death
+      # BotToRun(name:"TrackFire", path:"assets/sample-bots-java-"&assets_version), # fast death
+      BotToRun(name:"Target", path:"assets/sample-bots-java-"&assets_version), # slowest death
       # BotToRun(name:"Corners", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Walls", path:"assets/sample-bots-java-"&assets_version),
       # BotToRun(name:"Crazy", path:"assets/sample-bots-java-"&assets_version), # medium speed death

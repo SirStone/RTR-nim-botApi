@@ -1,5 +1,5 @@
 # import 3rd party libraries
-import json
+import json, jsony
 
 type
   Type* = enum
@@ -291,3 +291,17 @@ type
     events*: seq[Event] #All events occurring at this tick
 
   WonRoundEvent* = ref object of Event
+
+proc jsonToMessage*(json_message: string): Message =
+  # get the type of the message from the message itself
+  let `type` = json_message.fromJson(Message).`type`
+  # 'case' switch over type
+  case `type`:
+  of serverHandshake:
+    result = json_message.fromJson(ServerHandshake)
+  of gameStartedEventForBot:
+    result = json_message.fromJson(GameStartedEventForBot)
+  of tickEventForBot:
+    result = json_message.fromJson(TickEventForBot)
+  else:
+    echo "NOT HANDLED json_message message: ", json_message
