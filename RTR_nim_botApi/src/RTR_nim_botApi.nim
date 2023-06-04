@@ -1,10 +1,10 @@
 ## ***ROBOCODE TANKROYALE BOT API FOR NIM***
 
 #++++++++ standard libraries ++++++++#
-import std/[os, strutils, math, locks]
+import std/[os, strutils, math, sugar]
 
 #++++++++ 3rd party libraries ++++++++#
-import asyncdispatch, ws, jsony, json
+import asyncdispatch, ws, jsony, json, loony
 
 #++++++++ local components ++++++++#
 import RTR_nim_botApi/Components/[Bot, Messages, GamePhysics]
@@ -17,46 +17,9 @@ var lastTurnWeSentIntent*:int = -1
 var gs_ws:WebSocket
 var botRun = false
 var sendFlag = false
-var bot3:Bot
-
-const bufferSize = 100
-
-type
-  RingList[T] = object
-    data: array[bufferSize, T]
-    writeIndex: int
-    readIndex: int
-    count: int
-    lock: Lock
-    notFull: Cond
-    notEmpty: Cond
-
-proc put[T](r: var RingList[T], item: T) =
-  acquire(r.lock)
-  while r.count == bufferSize:
-    wait(r.notFull, r.lock)
-  r.data[r.writeIndex] = item
-  r.writeIndex = (r.writeIndex + 1) mod bufferSize
-  r.count += 1
-  echo "how mainy items in buffer:", r.count
-  signal(r.notEmpty)
-  release(r.lock)
-
-proc get[T](r: var RingList[T]): T =
-  acquire(r.lock)
-  while r.count == 0:
-    wait(r.notEmpty, r.lock)
-  let item = r.data[r.readIndex]
-  r.readIndex = (r.readIndex + 1) mod bufferSize
-  r.count -= 1
-  signal(r.notFull)
-  release(r.lock)
-  return item
-
-var messageList: RingList[string]
-initLock(messageList.lock)
-initCond(messageList.notFull)
-initCond(messageList.notEmpty)
+var bot:Bot
+let inputBM = newLoonyQueue[Message]()
+let outputBM = newLoonyQueue[Message]()
 
 proc updateRemainings(bot:Bot) =
   # body turn
@@ -185,13 +148,13 @@ proc stopBot(bot:Bot) =
 
   # sync() # force the run() thread to sync the 'running' variable, don't remove this if not for a good reason!
 
-proc messageHandler() =
+proc messageHandler() {.thread.} =
+  echo "messageHandler STARTED"
   while true:
-    let tried = chan.tryRecv()
-    if tried.dataAvailable:
-      echo "[API]",tried.msg
-    else:
-      sleep(100)
+    let message = inputBM.pop
+    if not message.isNil:
+        echo "[API] Got message to handle"
+        dump(message.`type`)
   # # get the type of the message from the message itself
   # let `type` = json_message.fromJson(Message).`type`
 
@@ -320,12 +283,12 @@ proc messageHandler() =
 
   # else: echo "NOT HANDLED MESSAGE: ",json_message
 
-proc messageListener(url:string) =
+proc messageListener(url:string) {.async.} =
   try: # try a websocket connection to server
     gs_ws = waitFor newWebSocket(url)
 
-    # if(gs_ws.readyState == Open):
-    #   bot.onConnected(url)
+    if(gs_ws.readyState == Open):
+      bot.onConnected(url)
 
     # while the connection is open...
     while(gs_ws.readyState == Open):
@@ -336,12 +299,16 @@ proc messageListener(url:string) =
       # GATE:asas the message is received we if is empty or similar useless message
       if json_message.isEmptyOrWhitespace(): continue
 
-      # handleMessage(bot, json_message, gs_ws)
-      messageList.put(json_message)
-  except CatchableError:
-    bot3.onConnectionError(getCurrentExceptionMsg())
+      # convert the json_message to a Message object
+      let message = jsonToMessage(json_message)
 
-proc newBot*(bot:Bot, json_file:string) =
+      # handleMessage(bot, json_message, gs_ws)
+      inputBM.push message
+      
+  except CatchableError:
+    echo "[API]ERROR:",getCurrentExceptionMsg()
+
+proc newBot*(new_bot:Bot, json_file:string) =
   ## **Create a new bot instance**
   ## 
   ## This method is used to create a new bot instance.
@@ -360,30 +327,31 @@ proc newBot*(bot:Bot, json_file:string) =
   ## <https://robocode-dev.github.io/tank-royale/tutorial/my-first-bot.html>`_.
   
   let bot2 = readFile(joinPath(getAppDir(),json_file)).fromJson(bot.type)
-  bot.name = bot2.name
-  bot.version = bot2.version
-  bot.gameTypes = bot2.gameTypes
-  bot.authors = bot2.authors
-  bot.description = bot2.description
-  bot.homepage = bot2.homepage
-  bot.countryCodes = bot2.countryCodes
-  bot.platform = bot2.platform
-  bot.programmingLang = bot2.programmingLang
-  bot.secret = getEnv("SERVER_SECRET", "serversecret")
-  bot.intent_rescan = false
-  bot.intent_fireAssist = false
-  bot.initialPosition = InitialPosition(x:0, y:0, angle:0)
-  bot.ACCELERATION = ACCELERATION
-  bot.DECELERATION = DECELERATION
-  bot.MAX_SPEED = MAX_SPEED
-  bot.current_maxSpeed = MAX_SPEED
-  bot.MAX_TURN_RATE = MAX_TURN_RATE
-  bot.MAX_RADAR_TURN_RATE = MAX_RADAR_TURN_RATE
-  bot.MAX_GUN_TURN_RATE = MAX_GUN_TURN_RATE
-  bot.MAX_FIRE_POWER = MAX_FIRE_POWER
-  bot.MIN_FIRE_POWER = MIN_FIRE_POWER
+  new_bot.name = bot2.name
+  new_bot.version = bot2.version
+  new_bot.gameTypes = bot2.gameTypes
+  new_bot.authors = bot2.authors
+  new_bot.description = bot2.description
+  new_bot.homepage = bot2.homepage
+  new_bot.countryCodes = bot2.countryCodes
+  new_bot.platform = bot2.platform
+  new_bot.programmingLang = bot2.programmingLang
+  new_bot.secret = getEnv("SERVER_SECRET", "serversecret")
+  new_bot.intent_rescan = false
+  new_bot.intent_fireAssist = false
+  new_bot.initialPosition = InitialPosition(x:0, y:0, angle:0)
+  new_bot.ACCELERATION = ACCELERATION
+  new_bot.DECELERATION = DECELERATION
+  new_bot.MAX_SPEED = MAX_SPEED
+  new_bot.current_maxSpeed = MAX_SPEED
+  new_bot.MAX_TURN_RATE = MAX_TURN_RATE
+  new_bot.MAX_RADAR_TURN_RATE = MAX_RADAR_TURN_RATE
+  new_bot.MAX_GUN_TURN_RATE = MAX_GUN_TURN_RATE
+  new_bot.MAX_FIRE_POWER = MAX_FIRE_POWER
+  new_bot.MIN_FIRE_POWER = MIN_FIRE_POWER
 
-  bot3 = bot
+  # internal pinter
+  bot = new_bot
 
 proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosition(x:0,y:0,angle:0)) =
   ## **Start the bot**
@@ -408,8 +376,10 @@ proc start*(bot:Bot, connect:bool = true, position:InitialPosition = InitialPosi
     if bot.serverConnectionURL == "": 
       bot.serverConnectionURL = getEnv("SERVER_URL", "ws://localhost:7654")
     
-    var messageListenerWorker, messageHandlerWorker: Thread[void]
-    createThread(messageListenerWorker, messageListener)
+    asyncCheck messageListener(bot.serverConnectionURL)
+    
+    var messageHandlerWorker: Thread[void]
     createThread(messageHandlerWorker, messageHandler)
     
-    joinThreads(messageListenerWorker, messageHandlerWorker)
+    joinThreads(messageHandlerWorker)
+    # joinThreads(messageListenerWorker)

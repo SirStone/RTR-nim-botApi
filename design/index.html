@@ -176,7 +176,30 @@
         PollingMessagesBuffer:::outputBM
       </pre>
     </div>
-    <hr>
+    <hr
+    <div>
+      <pre class="mermaid">
+        sequenceDiagram
+          participant Main
+          participant wsReceiver
+          participant wsSender
+          participant Handler
+          participant Run
+          Main--)wsReceiver: start async
+          Main--)wsSender: start async
+          Main--)Handler: start thread
+          Main--)Run: start thread
+          loop forever
+            wsReceiver-->>Handler: on message received
+          end
+          loop forever
+            Handler-->>wsSender: on message to send
+          end
+          loop forever
+            Run-->>Handler: intent on go()
+          end
+      </pre>
+    </div>
 </body>
 
 </html>

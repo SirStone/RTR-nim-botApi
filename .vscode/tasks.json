@@ -15,12 +15,12 @@
             "type": "shell",
             "command": "nim",
             "args": [
-                "c","--showAllMismatches:on","--threads:on","--gc:orc","--out:out/ProdCons_model","src/ProdCons_model.nim"
+                "c","--showAllMismatches:on","--threads:on","--gc:arc","--out:out/ProdCons_model","src/ProdCons_model.nim"
             ],
             "problemMatcher": [],
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
             }
         },
         {
@@ -59,7 +59,7 @@
             "problemMatcher": [],
             "group": {
                 "kind": "build",
-                "isDefault": false
+                "isDefault": true
             }
         },
         {
